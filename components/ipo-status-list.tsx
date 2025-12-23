@@ -28,6 +28,7 @@ import moment from "moment";
 import { toast } from "sonner"
 import { useGetMainboardsQuery, useUpdateMainboardMutation, useDeleteMainboardMutation } from "@/lib/features/api/mainboardApi"
 import { AlertModal } from "@/components/ui/alert-modal"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: string }) {
     const { data: mainBoardData, isLoading, isError, refetch, isFetching } = useGetMainboardsQuery({
@@ -290,7 +291,7 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
             </Sheet>
 
             {isLoading ? (
-                <div>Loading...</div>
+                <TableSkeleton rows={5} columns={10} />
             ) : isError ? (
                 <div>Error loading data</div>
             ) : (

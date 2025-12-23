@@ -5,6 +5,7 @@ import { ArrowUpDown, Pencil, TrendingUp } from "lucide-react"
 
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 import { Button } from "@/components/ui/button"
 import {
     Sheet,
@@ -179,7 +180,7 @@ export function GMPManager() {
             </Sheet>
 
             {isLoading ? (
-                <div>Loading...</div>
+                <TableSkeleton rows={5} columns={5} />
             ) : isError ? (
                 <div>Error loading data</div>
             ) : (

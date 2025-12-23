@@ -29,6 +29,7 @@ import moment from "moment";
 import { toast } from "sonner"
 import { useGetMainboardsQuery, useCreateMainboardMutation, useUpdateMainboardMutation, useDeleteMainboardMutation } from "@/lib/features/api/mainboardApi"
 import { AlertModal } from "@/components/ui/alert-modal"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 export function MainboardClient() {
     const { data: mainBoardData, isLoading, isError, refetch, isFetching } = useGetMainboardsQuery()
@@ -285,7 +286,7 @@ export function MainboardClient() {
             </div>
 
             {isLoading ? (
-                <div>Loading...</div>
+                <TableSkeleton rows={5} columns={9} />
             ) : isError ? (
                 <div>Error loading data</div>
             ) : (

@@ -1,7 +1,7 @@
 
 const fetch = require('node-fetch');
 
-const API_BASE_URL = 'https://ipo-management-backend.vercel.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function run() {
     try {

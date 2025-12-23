@@ -5,6 +5,7 @@ import { ArrowUpDown, Pencil, FileText, Check, X } from "lucide-react"
 
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 import { Button } from "@/components/ui/button"
 import {
     Sheet,
@@ -215,7 +216,7 @@ export function UserManager() {
             </Sheet>
 
             {isLoading ? (
-                <div>Loading...</div>
+                <TableSkeleton rows={5} columns={7} />
             ) : isError ? (
                 <div className="text-red-500">
                     Error loading users: {(error as any)?.data?.message || (error as any)?.error || "Unknown error"}

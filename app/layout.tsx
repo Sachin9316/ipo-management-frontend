@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IPO Admin Panel",
-  description: "Admin panel for managing IPO listings",
+  title: "IPO Wizard | Admin Panel",
+  description: "Enterprise-grade IPO management and analytics dashboard.",
 };
 
 import { ThemeProvider } from "@/components/theme-provider"
