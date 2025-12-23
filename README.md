@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IPO Management System - Frontend
 
-## Getting Started
+A modern, responsive admin panel for managing IPO (Initial Public Offering) data with support for both Mainboard and SME IPOs.
 
-First, run the development server:
+## Features
 
+- **Dual IPO Management**: Separate sections for Mainboard and SME IPOs
+- **Status-based Views**: Filter IPOs by status (Upcoming, Open, Closed, Listed)
+- **Comprehensive Management**:
+  - Subscription tracking and management
+  - GMP (Grey Market Premium) monitoring
+  - Listing information updates
+  - Document management (RHP, DRHP links)
+  - User and PAN document management
+- **Enhanced UI/UX**:
+  - Color-coded IPO type badges (Purple for SME, Blue for Mainboard)
+  - Advanced pagination with page numbers and ellipsis
+  - Responsive data tables with sorting and filtering
+  - Real-time data updates with RTK Query
+- **Authentication**: Secure login with OTP verification
+- **Form Validation**: Comprehensive Zod-based validation
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **State Management**: Redux Toolkit with RTK Query
+- **UI Components**: Shadcn UI
+- **Styling**: Tailwind CSS
+- **Forms**: React Hook Form with Zod validation
+- **Tables**: TanStack Table
+- **Date Handling**: date-fns
+- **Icons**: Lucide React
+
+## Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd ipo-frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Start the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+The application will start on `http://localhost:3000`
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+ipo-frontend/
+├── app/                    # Next.js app directory
+│   ├── dashboard/         # Dashboard pages
+│   │   ├── ipos/         # Mainboard IPO pages
+│   │   ├── sme/          # SME IPO pages
+│   │   ├── subscription/ # Subscription management
+│   │   ├── gmp/          # GMP management
+│   │   ├── listing-info/ # Listing information
+│   │   ├── documents/    # Document management
+│   │   └── users/        # User management
+│   ├── login/            # Login page
+│   └── layout.tsx        # Root layout
+├── components/            # React components
+│   ├── ui/               # Shadcn UI components
+│   ├── app-sidebar.tsx   # Sidebar navigation
+│   ├── ipo-form.tsx      # IPO form component
+│   └── *-manager.tsx     # Management components
+├── lib/                   # Utilities and configurations
+│   ├── features/         # Redux slices and API
+│   │   ├── api/         # RTK Query API slices
+│   │   └── auth/        # Auth slice
+│   └── store.ts         # Redux store configuration
+└── public/               # Static assets
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Key Features
 
-## Deploy on Vercel
+### IPO Management
+- Create, edit, and delete IPOs
+- Filter by status and type
+- View detailed IPO information
+- Manage subscription data
+- Track GMP history
+- Update listing information
+- Manage document links
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### User Management
+- View all customers
+- Manage user PAN documents
+- Update PAN verification status
+- View user details and statistics
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Pagination
+- Smart page number display (max 3 visible)
+- Ellipsis for hidden pages
+- Direct page navigation
+- Previous/Next buttons
+
+### Data Tables
+- Sortable columns
+- Search/filter functionality
+- Column visibility toggle
+- Responsive design
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+
+## Environment Variables
+
+- `NEXT_PUBLIC_API_URL` - Backend API URL
+
+## License
+
+ISC
