@@ -1,0 +1,33 @@
+import { apiSlice } from './apiSlice';
+
+export const userApi = apiSlice.injectEndpoints({
+    endpoints: (builder) => ({
+        getCustomers: builder.query<any, void>({
+            query: () => 'users/customers',
+            providesTags: ['User'],
+        }),
+        getUsers: builder.query<any, void>({
+            query: () => 'users',
+            providesTags: ['User'],
+        }),
+        getUserById: builder.query<any, string>({
+            query: (id) => `users/${id}`,
+            providesTags: (result, error, id) => [{ type: 'User', id }],
+        }),
+        updateUserPan: builder.mutation<any, { id: string; panDocuments: any[] }>({
+            query: ({ id, panDocuments }) => ({
+                url: `users/${id}/pan`,
+                method: 'PUT',
+                body: { panDocuments },
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: 'User', id }, 'User'],
+        }),
+    }),
+});
+
+export const {
+    useGetCustomersQuery,
+    useGetUsersQuery,
+    useGetUserByIdQuery,
+    useUpdateUserPanMutation,
+} = userApi;
