@@ -51,7 +51,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
                     <AlertDialogCancel disabled={loading} onClick={onClose}>
                         Cancel
                     </AlertDialogCancel>
-                    <AlertDialogAction disabled={loading} onClick={onConfirm} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+                    <AlertDialogAction disabled={loading} onClick={onConfirm} className="bg-red-600 hover:bg-red-700 focus:ring-red-600 text-white">
                         Continue
                     </AlertDialogAction>
                 </AlertDialogFooter>
