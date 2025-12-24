@@ -101,7 +101,7 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
             slug: "",
             icon: "",
             ipoType: "MAINBOARD",
-            status: "UPCOMING",
+            status: initialValues?.status || "UPCOMING",
             subscription_qib: 0,
             subscription_nii: 0,
             subscription_retail: 0,
@@ -138,55 +138,93 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
 
     useEffect(() => {
         if (initialValues) {
-            console.log("IPOForm initialValues:", initialValues);
+            console.log("Processing initialValues for form reset...");
+
             const values = { ...initialValues };
 
-            // Transform Dates
+            // 1. Explicitly extract and sanitize status
+            const statusValue = values.status || "UPCOMING";
+            console.log("Sanitized Status:", statusValue);
+
+            // 2. Prepare a clean object matching the schema specifically
+            // This prevents extra fields from backend polluting the form state
+            const cleanValues: any = {
+                status: statusValue,
+                companyName: values.companyName || "",
+                slug: values.slug || "",
+                icon: values.icon || "",
+                ipoType: values.ipoType || "MAINBOARD",
+                bse_code_nse_code: values.bse_code_nse_code || "",
+                lot_size: values.lot_size || 0,
+                lot_price: values.lot_price || 0,
+                isAllotmentOut: values.isAllotmentOut || false,
+                rhp_pdf: values.rhp_pdf || "",
+                drhp_pdf: values.drhp_pdf || "",
+                registrarName: values.registrarName || "",
+                registrarLink: values.registrarLink || "",
+            };
+
+            // 3. Transform Dates
             ['open_date', 'close_date', 'listing_date', 'refund_date', 'allotment_date'].forEach(field => {
-                if (values[field] && typeof values[field] === 'string') {
-                    values[field] = new Date(values[field]);
+                // Use the value from original object, convert, and assign to cleanValues
+                if (values[field]) {
+                    cleanValues[field] = new Date(values[field]);
+                } else {
+                    cleanValues[field] = new Date();
                 }
             });
 
-            if (values.status) {
-                values.status = values.status.toUpperCase();
-            }
-
-            // Transform Nested Subscription to Flat
+            // 4. Transform Nested Subscription to Flat
             if (values.subscription && typeof values.subscription === 'object') {
-                values.subscription_qib = values.subscription.qib || 0;
-                values.subscription_nii = values.subscription.nii || 0;
-                values.subscription_retail = values.subscription.retail || 0;
-                values.subscription_employee = values.subscription.employee || 0;
-                values.subscription_total = values.subscription.total || 0;
+                cleanValues.subscription_qib = values.subscription.qib || 0;
+                cleanValues.subscription_nii = values.subscription.nii || 0;
+                cleanValues.subscription_retail = values.subscription.retail || 0;
+                cleanValues.subscription_employee = values.subscription.employee || 0;
+                cleanValues.subscription_total = values.subscription.total || 0;
+            } else {
+                cleanValues.subscription_qib = values.subscription_qib || 0;
+                cleanValues.subscription_nii = values.subscription_nii || 0;
+                cleanValues.subscription_retail = values.subscription_retail || 0;
+                cleanValues.subscription_employee = values.subscription_employee || 0;
+                cleanValues.subscription_total = values.subscription.total || 0;
             }
 
-            // Transform GMP Array to Flat (Take latest price if array, or number if legacy)
+            // 5. Transform GMP
             if (Array.isArray(values.gmp) && values.gmp.length > 0) {
                 const latest = values.gmp[values.gmp.length - 1];
-                values.gmp = latest?.price || 0;
+                cleanValues.gmp = latest?.price || 0;
             } else if (typeof values.gmp === 'number') {
-                // legacy support or empty
+                cleanValues.gmp = values.gmp;
             } else {
-                values.gmp = 0;
+                cleanValues.gmp = 0;
             }
 
-            // Transform Financials
+            // 6. Transform Financials
             if (values.financials) {
-                values.financials_revenue = values.financials.revenue || 0;
-                values.financials_profit = values.financials.profit || 0;
-                values.financials_eps = values.financials.eps || 0;
-                values.financials_valuation = values.financials.valuation || "";
+                cleanValues.financials_revenue = values.financials.revenue || 0;
+                cleanValues.financials_profit = values.financials.profit || 0;
+                cleanValues.financials_eps = values.financials.eps || 0;
+                cleanValues.financials_valuation = values.financials.valuation || "";
+            } else {
+                cleanValues.financials_revenue = values.financials_revenue || 0;
+                cleanValues.financials_profit = values.financials_profit || 0;
+                cleanValues.financials_eps = values.financials_eps || 0;
+                cleanValues.financials_valuation = values.financials_valuation || "";
             }
 
-            // Transform Listing Info
+            // 7. Transform Listing Info
             if (values.listing_info) {
-                values.listing_price = values.listing_info.listing_price || 0;
-                values.listing_day_high = values.listing_info.day_high || 0;
-                values.listing_day_low = values.listing_info.day_low || 0;
+                cleanValues.listing_price = values.listing_info.listing_price || 0;
+                cleanValues.listing_day_high = values.listing_info.day_high || 0;
+                cleanValues.listing_day_low = values.listing_info.day_low || 0;
+            } else {
+                cleanValues.listing_price = values.listing_price || 0;
+                cleanValues.listing_day_high = values.listing_day_high || 0;
+                cleanValues.listing_day_low = values.listing_day_low || 0;
             }
 
-            form.reset(values);
+            console.log("Resetting form with CLEAN strings:", JSON.stringify(cleanValues, null, 2));
+            form.reset(cleanValues);
         }
     }, [initialValues, form]);
 
@@ -257,25 +295,28 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                         <FormField
                             control={form.control}
                             name="status"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Current Status</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select status" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="UPCOMING">Upcoming</SelectItem>
-                                            <SelectItem value="OPEN">Open</SelectItem>
-                                            <SelectItem value="CLOSED">Closed</SelectItem>
-                                            <SelectItem value="LISTED">Listed</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
+                            render={({ field }) => {
+                                console.log('field', field)
+                                return (
+                                    <FormItem>
+                                        <FormLabel>Current Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="UPCOMING">Upcoming</SelectItem>
+                                                <SelectItem value="OPEN">Open</SelectItem>
+                                                <SelectItem value="CLOSED">Closed</SelectItem>
+                                                <SelectItem value="LISTED">Listed</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )
+                            }}
                         />
                         {(status === 'CLOSED' || status === 'LISTED') && (
                             <FormField

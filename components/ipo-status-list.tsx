@@ -41,12 +41,10 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
 
-    // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [deleteLoading, setDeleteLoading] = useState(false)
 
-    // Filter Logic
     const filteredData = useMemo(() => {
         const data = mainBoardData?.data || []
         if (!status) return data
@@ -283,6 +281,7 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
                     </SheetHeader>
                     <div className="mt-4">
                         <IPOForm
+                            key={editingIPO?._id || editingIPO?.id || 'new'}
                             onSubmit={handleUpdate}
                             initialValues={editingIPO}
                         />
