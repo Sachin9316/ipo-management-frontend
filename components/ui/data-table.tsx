@@ -13,16 +13,16 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import {ChevronDown} from "lucide-react"
+import { ChevronDown } from "lucide-react"
 
-import {Button} from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {Input} from "@/components/ui/input"
+import { Input } from "@/components/ui/input"
 import {
     Table,
     TableBody,
@@ -35,12 +35,14 @@ import {
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
+    customFilter?: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
-                                             columns,
-                                             data,
-                                         }: DataTableProps<TData, TValue>) {
+    columns,
+    data,
+    customFilter
+}: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
         []
@@ -77,12 +79,13 @@ export function DataTable<TData, TValue>({
                     onChange={(event) =>
                         table.getColumn("companyName")?.setFilterValue(event.target.value)
                     }
-                    className="max-w-sm"
+                    className="max-w-sm mr-4"
                 />
+                {customFilter}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="ml-auto">
-                            Columns <ChevronDown className="ml-2 h-4 w-4"/>
+                            Columns <ChevronDown className="ml-2 h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">

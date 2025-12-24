@@ -40,7 +40,7 @@ import { ipoCreateSchema } from "@/lib/schemas"
 const formSchema = z.object({
     companyName: z.string().min(3, "Title must be at least 3 characters"),
     slug: z.string(),
-    icon: z.string(),
+    icon: z.string().optional(),
     ipoType: z.enum(["MAINBOARD", "SME"]).optional(),
     status: z.enum(["UPCOMING", "OPEN", "CLOSED", "LISTED"]),
     // Flat fields for form handling
@@ -58,6 +58,8 @@ const formSchema = z.object({
     allotment_date: z.coerce.date(),
     lot_size: z.coerce.number(),
     lot_price: z.coerce.number(),
+    min_price: z.coerce.number().optional().default(0),
+    max_price: z.coerce.number().optional().default(0),
     bse_code_nse_code: z.string(),
     isAllotmentOut: z.coerce.boolean(),
     rhp_pdf: z.string().optional(),
@@ -92,14 +94,24 @@ const formSchema = z.object({
     }
 });
 
+import imageCompression from "browser-image-compression";
+import { Loader2 } from "lucide-react";
+
+// ... existing imports
+
 export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => void, initialValues?: any }) {
     const [loading, setLoading] = useState(false)
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.icon || null);
+    const [isCompressing, setIsCompressing] = useState(false);
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             companyName: "",
             slug: "",
             icon: "",
+            // ... existing default values
             ipoType: "MAINBOARD",
             status: initialValues?.status || "UPCOMING",
             subscription_qib: 0,
@@ -115,6 +127,8 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
             allotment_date: new Date(),
             lot_size: 0,
             lot_price: 0,
+            min_price: 0,
+            max_price: 0,
             bse_code_nse_code: "",
             isAllotmentOut: false,
             rhp_pdf: "",
@@ -130,6 +144,37 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
             listing_day_low: 0,
         },
     })
+
+    const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsCompressing(true);
+        try {
+            const options = {
+                maxSizeMB: 0.09, // 90KB
+                maxWidthOrHeight: 800,
+                useWebWorker: true,
+            };
+
+            const compressedFile = await imageCompression(file, options);
+            setImageFile(compressedFile);
+
+            // Generate preview
+            const reader = new FileReader();
+            reader.readAsDataURL(compressedFile);
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            toast.success(`Image compressed to ${(compressedFile.size / 1024).toFixed(2)} KB`);
+
+        } catch (error) {
+            console.error("Image compression error:", error);
+            toast.error("Failed to compress image");
+        } finally {
+            setIsCompressing(false);
+        }
+    };
 
     const gmpValue = form.watch("gmp") || 0;
     const lotSizeValue = form.watch("lot_size") || 0;
@@ -157,6 +202,8 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                 bse_code_nse_code: values.bse_code_nse_code || "",
                 lot_size: values.lot_size || 0,
                 lot_price: values.lot_price || 0,
+                min_price: values.min_price || 0,
+                max_price: values.max_price || 0,
                 isAllotmentOut: values.isAllotmentOut || false,
                 rhp_pdf: values.rhp_pdf || "",
                 drhp_pdf: values.drhp_pdf || "",
@@ -228,54 +275,80 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
         }
     }, [initialValues, form]);
 
-    function handleSubmit(values: z.infer<typeof formSchema>) {
-        console.log("IPOForm handleSubmit triggered (Flat)", values);
+    async function handleSubmit(values: z.infer<typeof formSchema>) {
+        console.log("IPOForm handleSubmit triggered (FormData)");
+        setLoading(true);
 
-        // Transform Flat -> Nested API Payload
-        const apiPayload = {
-            ...values,
-            subscription: {
-                qib: values.subscription_qib,
-                nii: values.subscription_nii,
-                retail: values.subscription_retail,
-                employee: values.subscription_employee,
-                total: values.subscription_total,
-            },
-            gmp: [{
-                price: values.gmp,
-                kostak: "0",
-                date: new Date()
-            }],
-            financials: {
-                revenue: values.financials_revenue,
-                profit: values.financials_profit,
-                eps: values.financials_eps,
-                valuation: values.financials_valuation,
-            },
-            listing_info: {
-                listing_price: values.listing_price,
-                listing_gain: (values.listing_price && values.lot_price) ? values.listing_price - values.lot_price : 0,
-                day_high: values.listing_day_high,
-                day_low: values.listing_day_low,
+        try {
+            // Transform Flat -> Nested Payload Object first
+            const apiPayloadPlain = {
+                ...values,
+                subscription: {
+                    qib: values.subscription_qib,
+                    nii: values.subscription_nii,
+                    retail: values.subscription_retail,
+                    employee: values.subscription_employee,
+                    total: values.subscription_total,
+                },
+                gmp: [{
+                    price: values.gmp,
+                    kostak: "0",
+                    date: new Date()
+                }],
+                financials: {
+                    revenue: values.financials_revenue,
+                    profit: values.financials_profit,
+                    eps: values.financials_eps,
+                    valuation: values.financials_valuation,
+                },
+                listing_info: {
+                    listing_price: values.listing_price,
+                    listing_gain: (values.listing_price && values.lot_price) ? values.listing_price - values.lot_price : 0,
+                    day_high: values.listing_day_high,
+                    day_low: values.listing_day_low,
+                }
+            };
+
+            // Remove flat fields from payload object
+            const keysToRemove = [
+                'subscription_qib', 'subscription_nii', 'subscription_retail', 'subscription_employee', 'subscription_total',
+                'financials_revenue', 'financials_profit', 'financials_eps', 'financials_valuation',
+                'listing_price', 'listing_day_high', 'listing_day_low',
+                'icon' // handled separately
+            ];
+
+            keysToRemove.forEach(k => delete (apiPayloadPlain as any)[k]);
+
+            // Construct FormData
+            const formData = new FormData();
+
+            // Append all regular fields
+            Object.keys(apiPayloadPlain).forEach(key => {
+                const value = (apiPayloadPlain as any)[key];
+                if (value instanceof Date) {
+                    formData.append(key, value.toISOString());
+                } else if (typeof value === 'object' && value !== null) {
+                    // Serialize objects for backend JSON parser
+                    formData.append(key, JSON.stringify(value));
+                } else if (value !== undefined && value !== null) {
+                    formData.append(key, String(value));
+                }
+            });
+
+            // Append Image File
+            if (imageFile) {
+                formData.append('icon', imageFile);
             }
-        };
 
-        // Remove flat fields
-        delete (apiPayload as any).subscription_qib;
-        delete (apiPayload as any).subscription_nii;
-        delete (apiPayload as any).subscription_retail;
-        delete (apiPayload as any).subscription_employee;
-        delete (apiPayload as any).subscription_total;
-        delete (apiPayload as any).financials_revenue;
-        delete (apiPayload as any).financials_profit;
-        delete (apiPayload as any).financials_eps;
-        delete (apiPayload as any).financials_valuation;
-        delete (apiPayload as any).listing_price;
-        delete (apiPayload as any).listing_day_high;
-        delete (apiPayload as any).listing_day_low;
-
-        onSubmit(apiPayload);
-        setLoading(false);
+            // Call onSubmit with FormData
+            await onSubmit(formData);
+            toast.success("IPO saved successfully!");
+        } catch (error) {
+            console.error("Submission error:", error);
+            toast.error("Failed to save IPO");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -372,19 +445,36 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                                 </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="icon"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Icon URL</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="https://..." {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <FormItem>
+                            <FormLabel>Company Icon</FormLabel>
+                            <FormControl>
+                                <div className="flex flex-col gap-3">
+                                    {imagePreview && (
+                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
+                                            <img
+                                                src={imagePreview}
+                                                alt="Icon Preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            disabled={isCompressing}
+                                            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                                        />
+                                        {isCompressing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                    </div>
+                                    <p className="text-[0.8rem] text-muted-foreground">
+                                        Max size: 90KB (Auto-compressed)
+                                    </p>
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
                         <FormField
                             control={form.control}
                             name="ipoType"
@@ -428,10 +518,36 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <FormField
                             control={form.control}
+                            name="min_price"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Min Price (₹)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="max_price"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Max Price (₹)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
                             name="lot_price"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Lot Price (₹)</FormLabel>
+                                    <FormLabel>Cut-off Price (₹)</FormLabel>
                                     <FormControl>
                                         <Input type="number" {...field} />
                                     </FormControl>

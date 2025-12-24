@@ -4,7 +4,7 @@ export const ipoCreateSchema = z.object({
     body: z.object({
         companyName: z.string().min(3, "Title must be at least 3 characters"),
         slug: z.string(),
-        icon: z.string(),
+        icon: z.string().optional(),
         status: z.enum(["UPCOMING", "OPEN", "CLOSED", "LISTED"]),
         subscription: z.object({
             qib: z.coerce.number().optional().default(0),
@@ -26,6 +26,8 @@ export const ipoCreateSchema = z.object({
 
         lot_size: z.coerce.number(),
         lot_price: z.coerce.number(),
+        min_price: z.coerce.number().optional().default(0),
+        max_price: z.coerce.number().optional().default(0),
 
         bse_code_nse_code: z.string(),
         isAllotmentOut: z.coerce.boolean(),
@@ -64,6 +66,8 @@ export const ipoUpdateSchema = z.object({
         allotment_date: z.coerce.date().optional(),
         lot_size: z.coerce.number().optional(),
         lot_price: z.coerce.number().optional(),
+        min_price: z.coerce.number().optional(),
+        max_price: z.coerce.number().optional(),
         bse_code_nse_code: z.string().optional(),
         isAllotmentOut: z.coerce.boolean().optional(),
         subscription: z.object({

@@ -76,21 +76,21 @@ const items = [
                 url: "/dashboard",
                 icon: LayoutDashboard,
             },
+            {
+                title: "Add New IPO",
+                url: "/dashboard/ipos/add",
+                icon: Plus,
+            },
         ]
     },
     {
         title: "Management", // Group label
         items: [
             {
-                title: "IPO Management",
+                title: "MAINBOARD IPOs",
                 icon: Database,
                 isActive: true,
                 items: [
-                    {
-                        title: "Add New IPO",
-                        url: "/dashboard/ipos/add",
-                        icon: Plus,
-                    },
                     {
                         title: "Upcoming IPOs",
                         url: "/dashboard/ipos/upcoming",
@@ -240,7 +240,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                                     </CollapsibleTrigger>
                                                     <CollapsibleContent>
                                                         <SidebarMenuSub>
-                                                            {item.items.map((subItem) => {
+                                                            {item.items.map((subItem: any) => {
                                                                 const isSubActive = pathname === subItem.url
                                                                 return (
                                                                     <SidebarMenuSubItem key={subItem.title}>

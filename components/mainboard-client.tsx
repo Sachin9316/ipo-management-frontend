@@ -23,6 +23,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { IPOForm } from "@/components/ipo-form"
 import { IPOData } from "@/app/dashboard/mainboard/columns"
 import moment from "moment";
@@ -32,7 +39,8 @@ import { AlertModal } from "@/components/ui/alert-modal"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 export function MainboardClient() {
-    const { data: mainBoardData, isLoading, isError, refetch, isFetching } = useGetMainboardsQuery()
+    const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+    const { data: mainBoardData, isLoading, isError, refetch, isFetching } = useGetMainboardsQuery(statusFilter ? { status: statusFilter } : undefined)
     const [createMainboard] = useCreateMainboardMutation()
     const [updateMainboard] = useUpdateMainboardMutation()
     const [deleteMainboard] = useDeleteMainboardMutation()
@@ -290,7 +298,26 @@ export function MainboardClient() {
             ) : isError ? (
                 <div>Error loading data</div>
             ) : (
-                <DataTable columns={columns} data={mainBoardData?.data || []} />
+                <DataTable
+                    columns={columns}
+                    data={mainBoardData?.data || []}
+                    customFilter={
+                        <Select
+                            value={statusFilter || "all"}
+                            onValueChange={(value) => setStatusFilter(value === "all" ? undefined : value)}
+                        >
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="All Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="UPCOMING">Upcoming</SelectItem>
+                                <SelectItem value="LISTED">Listed</SelectItem>
+                                <SelectItem value="CLOSED">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    }
+                />
             )}
         </div>
     )

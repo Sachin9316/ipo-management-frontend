@@ -3,8 +3,12 @@ import { IPOData } from '@/app/dashboard/mainboard/columns'
 
 export const smeApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
-        getSMEIPOs: builder.query<IPOData[], void>({
-            query: () => 'v1/sme-ipos',
+        getSMEIPOs: builder.query<IPOData[], { status?: string } | void>({
+            query: (params) => {
+                const queryParams = new URLSearchParams();
+                if (params && params.status) queryParams.append("status", params.status);
+                return `v1/sme-ipos?${queryParams.toString()}`;
+            },
             providesTags: ['SME'],
         }),
         createSMEIPO: builder.mutation<void, any>({
