@@ -55,7 +55,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { useState } from "react"
+import { useState, useMemo, useCallback } from "react"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -180,11 +180,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { isMobile, setOpenMobile } = useSidebar()
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
-    const handleMobileClick = () => {
+    const handleMobileClick = useCallback(() => {
         if (isMobile) {
             setOpenMobile(false)
         }
-    }
+    }, [isMobile, setOpenMobile])
 
     const handleLogout = () => {
         dispatch(logOut())
@@ -192,8 +192,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         router.push("/login")
     }
 
-    return (
-        <Sidebar collapsible="icon" {...props} className="border-r border-border/50 bg-background/95 backdrop-blur-sm">
+    const sidebarContent = useMemo(() => (
+        <>
             <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
                 <AlertDialogContent className="max-w-[320px] sm:max-w-lg rounded-xl">
                     <AlertDialogHeader>
@@ -359,6 +359,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
             </SidebarFooter>
             <SidebarRail />
+        </>
+    ), [pathname, user, showLogoutDialog, handleMobileClick])
+
+    return (
+        <Sidebar collapsible="icon" {...props} className="border-r border-border/50 bg-background/95 backdrop-blur-sm">
+            {sidebarContent}
         </Sidebar>
     )
 }
