@@ -201,6 +201,25 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
             },
         },
         {
+            accessorKey: "isAllotmentOut",
+            header: "Allotment",
+            cell: ({ row }) => {
+                const isOut = row.getValue("isAllotmentOut");
+                return isOut ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                        Released
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground text-xs">-</span>
+                )
+            }
+        },
+        {
+            accessorKey: "registrarName",
+            header: "Registrar",
+            cell: ({ row }) => <div className="text-sm truncate max-w-[100px]" title={row.getValue("registrarName") as string}>{row.getValue("registrarName") || "-"}</div>
+        },
+        {
             accessorKey: "open_date",
             header: "Open Date",
             cell: ({ row }) => <div>{moment(row.getValue("open_date")).format('ll')}</div>
