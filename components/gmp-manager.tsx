@@ -130,7 +130,7 @@ export function GMPManager() {
                     gmp = parseFloat(val);
                 }
 
-                const lotSize = row.getValue<number>("lot_size") || 0
+                const lotSize = row.original.lot_size || 0
                 const estimatedGain = gmp * lotSize;
 
                 return (

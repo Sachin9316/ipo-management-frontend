@@ -39,6 +39,7 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
     SidebarSeparator,
+    useSidebar,
 } from "@/components/ui/sidebar"
 import {
     Collapsible,
@@ -176,7 +177,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const router = useRouter()
     const dispatch = useAppDispatch()
     const user = useAppSelector(selectCurrentUser)
+    const { isMobile, setOpenMobile } = useSidebar()
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+
+    const handleMobileClick = () => {
+        if (isMobile) {
+            setOpenMobile(false)
+        }
+    }
 
     const handleLogout = () => {
         dispatch(logOut())
@@ -205,7 +213,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                        <SidebarMenuButton onClick={handleMobileClick} size="lg" asChild className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                             <Link href="#">
                                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-white border border-border/10 shadow-sm">
                                     <img src="/logo.png" alt="Bluestock" className="size-6 object-contain" />
@@ -244,7 +252,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                                                 const isSubActive = pathname === subItem.url
                                                                 return (
                                                                     <SidebarMenuSubItem key={subItem.title}>
-                                                                        <SidebarMenuSubButton asChild isActive={isSubActive}>
+                                                                        <SidebarMenuSubButton onClick={handleMobileClick} asChild isActive={isSubActive}>
                                                                             <Link href={subItem.url} className={isSubActive ? "font-medium text-primary" : "text-muted-foreground"}>
                                                                                 {subItem.icon && <subItem.icon />}
                                                                                 <span>{subItem.title}</span>
@@ -265,6 +273,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     return (
                                         <SidebarMenuItem key={item.title}>
                                             <SidebarMenuButton
+                                                onClick={handleMobileClick}
                                                 asChild
                                                 isActive={isActive}
                                                 tooltip={item.title}
