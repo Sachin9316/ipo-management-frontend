@@ -173,13 +173,7 @@ export function LoginForm() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-4 border-t pt-6 pb-8">
                 <div className="text-center text-sm text-muted-foreground">
-                    Don&apos;t have an account?{" "}
-                    <Link
-                        href="/register"
-                        className="font-medium text-primary hover:text-primary/90 underline-offset-4 hover:underline transition-all"
-                    >
-                        Sign up
-                    </Link>
+                    Admin access only. Unauthorized access is restricted.
                 </div>
             </CardFooter>
         </Card>

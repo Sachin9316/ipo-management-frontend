@@ -14,6 +14,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,17 +27,35 @@ import { IPOForm } from "@/components/ipo-form"
 import { IPOData } from "@/app/dashboard/mainboard/columns"
 import moment from "moment";
 import { toast } from "sonner"
-import { useGetMainboardsQuery, useUpdateMainboardMutation, useDeleteMainboardMutation } from "@/lib/features/api/mainboardApi"
+import {
+    useGetMainboardsQuery,
+    useUpdateMainboardMutation,
+    useDeleteMainboardMutation
+} from "@/lib/features/api/mainboardApi"
+import {
+    useGetSMEIPOsQuery,
+    useUpdateSMEIPOMutation,
+    useDeleteSMEIPOMutation
+} from "@/lib/features/api/smeApi"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { ImageModal } from "@/components/ui/image-modal"
 
-export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: string }) {
-    const { data: mainBoardData, isLoading, isError, refetch, isFetching } = useGetMainboardsQuery({
-        limit: 1000,
-        ipoType: ipoType
-    })
+export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: string, ipoType?: string }) {
+    const isSME = ipoType === "SME";
+
+    // Queries
+    const mainboardQuery = useGetMainboardsQuery({ limit: 1000 }, { skip: isSME });
+    const smeQuery = useGetSMEIPOsQuery(undefined, { skip: !isSME });
+
+    const query = isSME ? smeQuery : mainboardQuery;
+    const { data: rawData, isLoading, isError, isFetching } = query;
+
+    // Mutations
     const [updateMainboard] = useUpdateMainboardMutation()
     const [deleteMainboard] = useDeleteMainboardMutation()
+    const [updateSME] = useUpdateSMEIPOMutation()
+    const [deleteSME] = useDeleteSMEIPOMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
@@ -45,21 +64,30 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [deleteLoading, setDeleteLoading] = useState(false)
 
+    const [previewImage, setPreviewImage] = useState<string | null>(null)
+    const [previewOpen, setPreviewOpen] = useState(false)
+
     const filteredData = useMemo(() => {
-        const data = mainBoardData?.data || []
+        // Mainboard data is nested in .data, SME is likely a direct array or also nested?
+        // Let's normalize based on common structure
+        const data = Array.isArray(rawData) ? rawData : (rawData as any)?.data || []
         if (!status) return data
         const targetStatus = status.toUpperCase();
         return data.filter((item: IPOData) => item.status === targetStatus)
-    }, [mainBoardData, status, ipoType])
+    }, [rawData, status])
 
     const handleUpdate = async (values: any) => {
         if (!editingIPO) return;
         const idToUpdate = editingIPO._id || editingIPO.id;
         try {
-            await updateMainboard({ id: idToUpdate!, data: values }).unwrap()
+            if (isSME) {
+                await updateSME({ id: idToUpdate!, data: values }).unwrap()
+            } else {
+                await updateMainboard({ id: idToUpdate!, data: values }).unwrap()
+            }
             setIsOpen(false);
             setEditingIPO(null);
-            toast.success("IPO updated successfully")
+            toast.success(`${ipoType} IPO updated successfully`)
         } catch (error) {
             console.error(error);
             toast.error("Error updating IPO")
@@ -75,8 +103,12 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
         if (!deleteId) return;
         setDeleteLoading(true);
         try {
-            await deleteMainboard(deleteId).unwrap()
-            toast.success("IPO deleted successfully")
+            if (isSME) {
+                await deleteSME(deleteId).unwrap()
+            } else {
+                await deleteMainboard(deleteId).unwrap()
+            }
+            toast.success(`${ipoType} IPO deleted successfully`)
             setDeleteModalOpen(false);
             setDeleteId(null);
         } catch (error) {
@@ -90,6 +122,11 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
     const handleEditClick = (ipo: IPOData) => {
         setEditingIPO(ipo);
         setIsOpen(true);
+    }
+
+    const onImageClick = (url: string) => {
+        setPreviewImage(url);
+        setPreviewOpen(true);
     }
 
     const columns: ColumnDef<IPOData>[] = useMemo(() => [
@@ -106,7 +143,25 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
                     </Button>
                 )
             },
-            cell: ({ row }) => <div className="font-bold pl-3">{row.getValue("companyName")}</div>,
+            cell: ({ row }) => (
+                <div className="flex items-center gap-3 pl-2">
+                    <div
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onImageClick(row.original.icon);
+                        }}
+                    >
+                        <Avatar className="h-8 w-8 rounded-lg border border-border">
+                            <AvatarImage src={row.original.icon} alt={row.getValue("companyName")} className="object-cover" />
+                            <AvatarFallback className="rounded-lg font-bold">
+                                {(row.getValue("companyName") as string)?.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <div className="font-bold">{row.getValue("companyName")}</div>
+                </div>
+            ),
         },
         {
             accessorKey: "ipoType",
@@ -274,6 +329,12 @@ export function IPOStatusList({ status, ipoType }: { status?: string, ipoType?: 
 
     return (
         <div className="flex flex-col gap-4">
+            <ImageModal
+                isOpen={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+                imageUrl={previewImage}
+                title="Company Logo"
+            />
             <AlertModal
                 isOpen={deleteModalOpen}
                 onClose={() => setDeleteModalOpen(false)}

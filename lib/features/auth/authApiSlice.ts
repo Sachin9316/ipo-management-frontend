@@ -9,13 +9,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
                 body: credentials,
             }),
         }),
-        register: builder.mutation({
-            query: (userData) => ({
-                url: "auth/register",
-                method: "POST",
-                body: userData,
-            }),
-        }),
+
         verifyOtp: builder.mutation({
             query: (data) => ({
                 url: "auth/verify-otp",
@@ -59,7 +53,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
 
 export const {
     useLoginMutation,
-    useRegisterMutation,
+
     useVerifyOtpMutation,
     useAdminPingMutation,
     useGetUserQuery,

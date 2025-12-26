@@ -139,6 +139,11 @@ const items = [
                 icon: TrendingUp,
             },
             {
+                title: "Registrars",
+                url: "/dashboard/registrars",
+                icon: Users,
+            },
+            {
                 title: "Subscriptions",
                 url: "/dashboard/subscription",
                 icon: Briefcase,

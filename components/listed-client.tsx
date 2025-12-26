@@ -14,6 +14,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,6 +27,7 @@ import { IPOData } from "@/app/dashboard/mainboard/columns"
 import moment from "moment";
 import { toast } from "sonner"
 import { useGetListedIPOsQuery, useUpdateListedIPOMutation, useDeleteListedIPOMutation } from "@/lib/features/api/listedApi"
+import { AlertModal } from "@/components/ui/alert-modal"
 
 interface ListedClientProps {
     initialData: IPOData[]
@@ -42,6 +44,10 @@ export function ListedClient({ initialData }: ListedClientProps) {
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
     const router = useRouter()
 
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [deleteId, setDeleteId] = useState<string | null>(null)
+    const [deleteLoading, setDeleteLoading] = useState(false)
+
     const handleUpdate = async (values: any) => {
         if (!editingIPO) return;
         try {
@@ -55,14 +61,24 @@ export function ListedClient({ initialData }: ListedClientProps) {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this Listed IPO?")) return;
+    const onDelete = (id: string) => {
+        setDeleteId(id);
+        setDeleteModalOpen(true);
+    }
+
+    const onConfirmDelete = async () => {
+        if (!deleteId) return;
+        setDeleteLoading(true);
         try {
-            await deleteListedIPO(id).unwrap()
+            await deleteListedIPO(deleteId).unwrap()
             toast.success("Listed IPO deleted successfully")
+            setDeleteModalOpen(false);
+            setDeleteId(null);
         } catch (error) {
             console.error(error);
             toast.error("Error deleting Listed IPO")
+        } finally {
+            setDeleteLoading(false);
         }
     }
 
@@ -80,7 +96,17 @@ export function ListedClient({ initialData }: ListedClientProps) {
                     </Button>
                 )
             },
-            cell: ({ row }) => <div className="font-bold pl-3">{row.getValue("companyName")}</div>,
+            cell: ({ row }) => (
+                <div className="flex items-center gap-3 pl-2">
+                    <Avatar className="h-8 w-8 rounded-lg border border-border">
+                        <AvatarImage src={row.original.icon} alt={row.getValue("companyName")} className="object-cover" />
+                        <AvatarFallback className="rounded-lg font-bold">
+                            {(row.getValue("companyName") as string)?.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="font-bold">{row.getValue("companyName")}</div>
+                </div>
+            ),
         },
         {
             accessorKey: "lot_size",
@@ -204,7 +230,7 @@ export function ListedClient({ initialData }: ListedClientProps) {
                             }}>
                                 <Pencil className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(ipo.id || ipo._id || "")} className="text-red-600">
+                            <DropdownMenuItem onClick={() => onDelete(ipo.id || ipo._id || "")} className="text-red-600">
                                 <Trash className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -217,6 +243,14 @@ export function ListedClient({ initialData }: ListedClientProps) {
 
     return (
         <div className="flex flex-col gap-4">
+            <AlertModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={onConfirmDelete}
+                loading={deleteLoading}
+                title="Delete Listed IPO"
+                description="Are you sure you want to delete this Listed IPO? This action cannot be undone."
+            />
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">Listed IPOs</h1>
                 {/* No Add Button for Listed IPOs */}

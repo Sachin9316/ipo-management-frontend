@@ -46,6 +46,8 @@ const formSchema = z.object({
     // Flat fields for form handling
     subscription_qib: z.coerce.number().optional().default(0),
     subscription_nii: z.coerce.number().optional().default(0),
+    subscription_bnii: z.coerce.number().optional().default(0),
+    subscription_snii: z.coerce.number().optional().default(0),
     subscription_retail: z.coerce.number().optional().default(0),
     subscription_employee: z.coerce.number().optional().default(0),
     subscription_total: z.coerce.number().optional().default(0),
@@ -94,12 +96,71 @@ const formSchema = z.object({
     }
 });
 
+import { useGetRegistrarsQuery } from "@/lib/features/api/registrarApi"
 import imageCompression from "browser-image-compression";
 import { Loader2 } from "lucide-react";
 
 // ... existing imports
 
-export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => void, initialValues?: any }) {
+// Helper to add trading days (skipping Sat/Sun)
+function addTradingDays(date: Date, days: number): Date {
+    let result = new Date(date);
+    let added = 0;
+    while (added < days) {
+        result.setDate(result.getDate() + 1);
+        if (result.getDay() !== 0 && result.getDay() !== 6) {
+            added++;
+        }
+    }
+    return result;
+}
+
+function SmartDatePicker({ value, onChange, disabled, label }: { value: Date | undefined, onChange: (date: Date | undefined) => void, disabled?: (date: Date) => boolean, label: string }) {
+    const [open, setOpen] = useState(false)
+    return (
+        <FormItem className="flex flex-col">
+            <FormLabel>{label}</FormLabel>
+            <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                    <FormControl>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !value && "text-muted-foreground"
+                            )}
+                        >
+                            {value ? (
+                                format(value, "dd MMM yyyy")
+                            ) : (
+                                <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                    </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={value}
+                        onSelect={(date) => {
+                            onChange(date);
+                            setOpen(false);
+                        }}
+                        disabled={disabled}
+                        initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+            <FormMessage />
+        </FormItem>
+    )
+}
+
+export function IPOForm({ onSubmit, initialValues, defaultType = "MAINBOARD" }: { onSubmit: (data: any) => void, initialValues?: any, defaultType?: string }) {
+    const { data: registrarsData } = useGetRegistrarsQuery(undefined)
+    const registrars = registrarsData?.registrars || []
+
     const [loading, setLoading] = useState(false)
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.icon || null);
@@ -112,10 +173,12 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
             slug: "",
             icon: "",
             // ... existing default values
-            ipoType: "MAINBOARD",
+            ipoType: initialValues?.ipoType || defaultType,
             status: initialValues?.status || "UPCOMING",
             subscription_qib: 0,
             subscription_nii: 0,
+            subscription_bnii: 0,
+            subscription_snii: 0,
             subscription_retail: 0,
             subscription_employee: 0,
             subscription_total: 0,
@@ -180,25 +243,76 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
     const lotSizeValue = form.watch("lot_size") || 0;
     const estimatedGain = gmpValue * lotSizeValue;
     const status = form.watch("status");
+    const companyName = form.watch("companyName");
+    const maxPrice = form.watch("max_price");
+
+    // Watch Subscription Fields for Auto-Calculation
+    const subQIB = form.watch("subscription_qib");
+    const subNII = form.watch("subscription_nii");
+    const subBNII = form.watch("subscription_bnii");
+    const subSNII = form.watch("subscription_snii");
+    const subRetail = form.watch("subscription_retail");
+    const subEmployee = form.watch("subscription_employee");
+
+    // Auto-generate Slug
+    useEffect(() => {
+        if (companyName && !initialValues) {
+            const generatedSlug = companyName
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dashes
+                .replace(/^-+|-+$/g, '') + "-ipo"; // Trim dashes and append -ipo
+
+            // Only update if slug is empty or looks like an auto-generated one
+            const currentSlug = form.getValues("slug");
+            if (!currentSlug || currentSlug.includes("-ipo")) {
+                form.setValue("slug", generatedSlug);
+            }
+        }
+    }, [companyName, form, initialValues]);
+
+    // Auto-fill Cut-off Price (Lot Price) from Max Price
+    useEffect(() => {
+        if (maxPrice) {
+            const currentLotPrice = form.getValues("lot_price");
+            // Update if lot_price is empty or equals previous max_price logic (heuristic)
+            if (!currentLotPrice || currentLotPrice === 0) {
+                form.setValue("lot_price", maxPrice);
+            }
+        }
+    }, [maxPrice, form]);
+
+    // Auto-calculate Total Subscription (Summation)
+    useEffect(() => {
+        const total = (Number(subQIB) || 0) + (Number(subNII) || 0) + (Number(subRetail) || 0) + (Number(subEmployee) || 0);
+        // Only update if total is different to avoid loops, and strictly if user hasn't overridden it? 
+        // For "fast filling", we generally want it to sync always.
+        if (total >= 0) {
+            form.setValue("subscription_total", total);
+        }
+    }, [subQIB, subNII, subRetail, subEmployee, form]);
+
+    // Auto-calculate NII from bNII (HNI) + sNII (SNI)
+    useEffect(() => {
+        const niiTotal = (Number(subBNII) || 0) + (Number(subSNII) || 0);
+        if (niiTotal > 0) {
+            form.setValue("subscription_nii", niiTotal);
+        }
+    }, [subBNII, subSNII, form]);
 
     useEffect(() => {
         if (initialValues) {
             console.log("Processing initialValues for form reset...");
 
             const values = { ...initialValues };
-
-            // 1. Explicitly extract and sanitize status
             const statusValue = values.status || "UPCOMING";
-            console.log("Sanitized Status:", statusValue);
 
-            // 2. Prepare a clean object matching the schema specifically
-            // This prevents extra fields from backend polluting the form state
+            // Prepare a clean object matching the schema specifically
             const cleanValues: any = {
-                status: statusValue,
                 companyName: values.companyName || "",
                 slug: values.slug || "",
                 icon: values.icon || "",
                 ipoType: values.ipoType || "MAINBOARD",
+                status: statusValue,
                 bse_code_nse_code: values.bse_code_nse_code || "",
                 lot_size: values.lot_size || 0,
                 lot_price: values.lot_price || 0,
@@ -211,32 +325,27 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                 registrarLink: values.registrarLink || "",
             };
 
-            // 3. Transform Dates
+            // Transform Dates safely
             ['open_date', 'close_date', 'listing_date', 'refund_date', 'allotment_date'].forEach(field => {
-                // Use the value from original object, convert, and assign to cleanValues
                 if (values[field]) {
-                    cleanValues[field] = new Date(values[field]);
+                    const date = new Date(values[field]);
+                    cleanValues[field] = isNaN(date.getTime()) ? new Date() : date;
                 } else {
                     cleanValues[field] = new Date();
                 }
             });
 
-            // 4. Transform Nested Subscription to Flat
-            if (values.subscription && typeof values.subscription === 'object') {
-                cleanValues.subscription_qib = values.subscription.qib || 0;
-                cleanValues.subscription_nii = values.subscription.nii || 0;
-                cleanValues.subscription_retail = values.subscription.retail || 0;
-                cleanValues.subscription_employee = values.subscription.employee || 0;
-                cleanValues.subscription_total = values.subscription.total || 0;
-            } else {
-                cleanValues.subscription_qib = values.subscription_qib || 0;
-                cleanValues.subscription_nii = values.subscription_nii || 0;
-                cleanValues.subscription_retail = values.subscription_retail || 0;
-                cleanValues.subscription_employee = values.subscription_employee || 0;
-                cleanValues.subscription_total = values.subscription.total || 0;
-            }
+            // Transform Nested Subscription to Flat
+            const sub = values.subscription;
+            cleanValues.subscription_qib = sub?.qib ?? values.subscription_qib ?? 0;
+            cleanValues.subscription_nii = sub?.nii ?? values.subscription_nii ?? 0;
+            cleanValues.subscription_bnii = sub?.bnii ?? values.subscription_bnii ?? 0;
+            cleanValues.subscription_snii = sub?.snii ?? values.subscription_snii ?? 0;
+            cleanValues.subscription_retail = sub?.retail ?? values.subscription_retail ?? 0;
+            cleanValues.subscription_employee = sub?.employee ?? values.subscription_employee ?? 0;
+            cleanValues.subscription_total = sub?.total ?? values.subscription_total ?? 0;
 
-            // 5. Transform GMP
+            // Transform GMP
             if (Array.isArray(values.gmp) && values.gmp.length > 0) {
                 const latest = values.gmp[values.gmp.length - 1];
                 cleanValues.gmp = latest?.price || 0;
@@ -246,31 +355,20 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                 cleanValues.gmp = 0;
             }
 
-            // 6. Transform Financials
-            if (values.financials) {
-                cleanValues.financials_revenue = values.financials.revenue || 0;
-                cleanValues.financials_profit = values.financials.profit || 0;
-                cleanValues.financials_eps = values.financials.eps || 0;
-                cleanValues.financials_valuation = values.financials.valuation || "";
-            } else {
-                cleanValues.financials_revenue = values.financials_revenue || 0;
-                cleanValues.financials_profit = values.financials_profit || 0;
-                cleanValues.financials_eps = values.financials_eps || 0;
-                cleanValues.financials_valuation = values.financials_valuation || "";
-            }
+            // Transform Financials
+            const fin = values.financials;
+            cleanValues.financials_revenue = fin?.revenue ?? values.financials_revenue ?? 0;
+            cleanValues.financials_profit = fin?.profit ?? values.financials_profit ?? 0;
+            cleanValues.financials_eps = fin?.eps ?? values.financials_eps ?? 0;
+            cleanValues.financials_valuation = fin?.valuation ?? values.financials_valuation ?? "";
 
-            // 7. Transform Listing Info
-            if (values.listing_info) {
-                cleanValues.listing_price = values.listing_info.listing_price || 0;
-                cleanValues.listing_day_high = values.listing_info.day_high || 0;
-                cleanValues.listing_day_low = values.listing_info.day_low || 0;
-            } else {
-                cleanValues.listing_price = values.listing_price || 0;
-                cleanValues.listing_day_high = values.listing_day_high || 0;
-                cleanValues.listing_day_low = values.listing_day_low || 0;
-            }
+            // Transform Listing Info
+            const listInfo = values.listing_info;
+            cleanValues.listing_price = listInfo?.listing_price ?? values.listing_price ?? 0;
+            cleanValues.listing_day_high = listInfo?.day_high ?? values.listing_day_high ?? 0;
+            cleanValues.listing_day_low = listInfo?.day_low ?? values.listing_day_low ?? 0;
 
-            console.log("Resetting form with CLEAN strings:", JSON.stringify(cleanValues, null, 2));
+            console.log("Resetting form with clean state:", cleanValues.companyName);
             form.reset(cleanValues);
         }
     }, [initialValues, form]);
@@ -286,6 +384,8 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                 subscription: {
                     qib: values.subscription_qib,
                     nii: values.subscription_nii,
+                    bnii: values.subscription_bnii,
+                    snii: values.subscription_snii,
                     retail: values.subscription_retail,
                     employee: values.subscription_employee,
                     total: values.subscription_total,
@@ -311,7 +411,7 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
 
             // Remove flat fields from payload object
             const keysToRemove = [
-                'subscription_qib', 'subscription_nii', 'subscription_retail', 'subscription_employee', 'subscription_total',
+                'subscription_qib', 'subscription_nii', 'subscription_bnii', 'subscription_snii', 'subscription_retail', 'subscription_employee', 'subscription_total',
                 'financials_revenue', 'financials_profit', 'financials_eps', 'financials_valuation',
                 'listing_price', 'listing_day_high', 'listing_day_low',
                 'icon' // handled separately
@@ -375,8 +475,8 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                                         <FormLabel>Current Status</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select status" />
+                                                <SelectTrigger className="w-full overflow-hidden">
+                                                    <SelectValue placeholder="Select status" className="truncate" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -602,203 +702,171 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                             control={form.control}
                             name="open_date"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Open Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "dd MMM yyyy")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
+                                <SmartDatePicker
+                                    label="Open Date"
+                                    value={field.value}
+                                    onChange={(date) => {
+                                        field.onChange(date);
+                                        if (date) {
+                                            const closeDate = addTradingDays(date, 2); // 3 days total: Open(1) + 2
+                                            const allotmentDate = addTradingDays(closeDate, 1); // T+1
+                                            const refundDate = addTradingDays(closeDate, 1); // T+1 (approx)
+                                            const listingDate = addTradingDays(closeDate, 3); // T+3
+
+                                            form.setValue("close_date", closeDate);
+                                            form.setValue("allotment_date", allotmentDate);
+                                            form.setValue("refund_date", refundDate);
+                                            form.setValue("listing_date", listingDate);
+                                        }
+                                    }}
+                                    disabled={(date) => date < new Date("1900-01-01")}
+                                />
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="close_date"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Close Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "dd MMM yyyy")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
+                                <SmartDatePicker
+                                    label="Close Date"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    disabled={(date) => date < new Date("1900-01-01")}
+                                />
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="allotment_date"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Allotment Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "dd MMM yyyy")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
+                                <SmartDatePicker
+                                    label="Allotment Date"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    disabled={(date) => date < new Date("1900-01-01")}
+                                />
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="refund_date"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Refund Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "dd MMM yyyy")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
+                                <SmartDatePicker
+                                    label="Refund Date"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    disabled={(date) => date < new Date("1900-01-01")}
+                                />
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="listing_date"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Listing Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "dd MMM yyyy")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
+                                <SmartDatePicker
+                                    label="Listing Date"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    disabled={(date) => date < new Date("1900-01-01")}
+                                />
+                            )}
+                        />
+                    </div>
+                </div>
+
+                {/* 5. Subscription - Always Visible */}
+                <div className="rounded-lg border p-4 bg-card">
+                    <h3 className="mb-4 text-lg font-semibold">Subscription Details</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+                        <FormField
+                            control={form.control}
+                            name="subscription_qib"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>QIB (x)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="subscription_nii"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>NII (x)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="subscription_bnii"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>HNI (bNII)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="subscription_snii"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>SNI (sNII)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="subscription_retail"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Retail (x)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="subscription_employee"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Employee (x)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="subscription_total"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Total Subscription (x)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -806,114 +874,61 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                     </div>
                 </div>
 
-                {/* 5. Subscription - Conditional */}
-                {status !== 'UPCOMING' && (
-                    <div className="rounded-lg border p-4 bg-card">
-                        <h3 className="mb-4 text-lg font-semibold">Subscription Details</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="subscription_total"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Total Subscription (x)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="subscription_qib"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>QIB (x)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="subscription_nii"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>NII (x)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="subscription_retail"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Retail (x)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="subscription_employee"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Employee (x)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                    </div>
-                )}
 
-                {/* 6. Allotment Info - Conditional */}
-                {(status === 'CLOSED' || status === 'LISTED') && (
-                    <div className="rounded-lg border p-4 bg-card">
-                        <h3 className="mb-4 text-lg font-semibold">Allotment Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="registrarName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Registrar Name</FormLabel>
+                {/* 6. Allotment Info - Always Visible */}
+                <div className="rounded-lg border p-4 bg-card">
+                    <h3 className="mb-4 text-lg font-semibold">Allotment Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="registrarName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Registrar Name</FormLabel>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            const selected = registrars.find((r: any) => r.name === value);
+                                            field.onChange(value);
+                                            if (selected) {
+                                                form.setValue("registrarLink", selected.websiteLink);
+                                            }
+                                        }}
+                                        value={field.value}
+                                    >
                                         <FormControl>
-                                            <Input placeholder="Link Intime / KFintech" {...field} />
+                                            <SelectTrigger className="w-full overflow-hidden">
+                                                <span className="truncate w-full text-left">
+                                                    <SelectValue placeholder="Select Registrar" />
+                                                </span>
+                                            </SelectTrigger>
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="registrarLink"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Registrar Link</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="https://..." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                                        <SelectContent>
+                                            {registrars.map((registrar: any) => (
+                                                <SelectItem key={registrar._id} value={registrar.name}>
+                                                    {registrar.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="registrarLink"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Registrar Link</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
-                )}
+                </div>
 
                 {/* 7. Documents */}
                 <div className="rounded-lg border p-4 bg-card">
@@ -1063,6 +1078,6 @@ export function IPOForm({ onSubmit, initialValues }: { onSubmit: (data: any) => 
                     Save changes
                 </Button>
             </form>
-        </Form>
+        </Form >
     )
 }

@@ -36,12 +36,14 @@ interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
     customFilter?: React.ReactNode
+    filterColumnName?: string
 }
 
 export function DataTable<TData, TValue>({
     columns,
     data,
-    customFilter
+    customFilter,
+    filterColumnName = "companyName"
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -74,10 +76,10 @@ export function DataTable<TData, TValue>({
         <div className="w-full">
             <div className="flex items-center py-4">
                 <Input
-                    placeholder="Filter companies..."
-                    value={(table.getColumn("companyName")?.getFilterValue() as string) ?? ""}
+                    placeholder="Filter..."
+                    value={(table.getColumn(filterColumnName)?.getFilterValue() as string) ?? ""}
                     onChange={(event) =>
-                        table.getColumn("companyName")?.setFilterValue(event.target.value)
+                        table.getColumn(filterColumnName)?.setFilterValue(event.target.value)
                     }
                     className="max-w-sm mr-4"
                 />
