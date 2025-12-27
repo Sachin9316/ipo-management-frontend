@@ -140,26 +140,38 @@ export function DataTable<TData, TValue>({
                     </TableHeader>
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
+                            <>
+                                {table.getRowModel().rows.map((row) => (
+                                    <TableRow
+                                        key={row.id}
+                                        data-state={row.getIsSelected() && "selected"}
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                                {/* Empty Rows to maintain consistent height */}
+                                {table.getRowModel().rows.length < pagination.pageSize && (
+                                    Array.from({ length: pagination.pageSize - table.getRowModel().rows.length }).map((_, index) => (
+                                        <TableRow key={`empty-${index}`} className="border-b-0 hover:bg-transparent">
+                                            <TableCell colSpan={columns.length} className="h-[53px]">
+                                                {/* Hidden content or just empty to hold height */}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </>
                         ) : (
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
-                                    className="h-24 text-center"
+                                    className="h-[530px] text-center"
                                 >
                                     No results.
                                 </TableCell>
