@@ -29,6 +29,8 @@ export type IPOData = {
         retail: number
         employee: number
         total: number
+        snii?: number
+        bnii?: number
     }
     gmp?: {
         price: number

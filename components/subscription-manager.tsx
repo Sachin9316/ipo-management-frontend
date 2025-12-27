@@ -105,19 +105,35 @@ export function SubscriptionManager() {
             }
         },
         {
-            id: "nii",
-            header: "NII (x)",
-            cell: ({ row }) => {
-                const sub = row.original.subscription;
-                return <div className="font-medium">{(sub as any)?.nii || 0}x</div>
-            }
-        },
-        {
             id: "retail",
             header: "Retail (x)",
             cell: ({ row }) => {
                 const sub = row.original.subscription;
                 return <div className="font-medium">{(sub as any)?.retail || 0}x</div>
+            }
+        },
+        {
+            id: "snii",
+            header: "SNI (x)",
+            cell: ({ row }) => {
+                const sub = row.original.subscription;
+                return <div className="font-medium">{(sub as any)?.snii || 0}x</div>
+            }
+        },
+        {
+            id: "bnii",
+            header: "HNI (x)",
+            cell: ({ row }) => {
+                const sub = row.original.subscription;
+                return <div className="font-medium">{(sub as any)?.bnii || 0}x</div>
+            }
+        },
+        {
+            id: "nii",
+            header: "NII (x)",
+            cell: ({ row }) => {
+                const sub = row.original.subscription;
+                return <div className="font-medium">{(sub as any)?.nii || 0}x</div>
             }
         },
         {
