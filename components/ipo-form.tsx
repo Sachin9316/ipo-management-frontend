@@ -63,6 +63,7 @@ const formSchema = z.object({
     min_price: z.coerce.number().optional().default(0),
     max_price: z.coerce.number().optional().default(0),
     bse_code_nse_code: z.string(),
+    issueSize: z.string().optional(),
     isAllotmentOut: z.coerce.boolean(),
     rhp_pdf: z.string().optional(),
     drhp_pdf: z.string().optional(),
@@ -193,6 +194,7 @@ export function IPOForm({ onSubmit, initialValues, defaultType = "MAINBOARD" }: 
             min_price: 0,
             max_price: 0,
             bse_code_nse_code: "",
+            issueSize: "",
             isAllotmentOut: false,
             rhp_pdf: "",
             drhp_pdf: "",
@@ -318,6 +320,7 @@ export function IPOForm({ onSubmit, initialValues, defaultType = "MAINBOARD" }: 
                 lot_price: values.lot_price || 0,
                 min_price: values.min_price || 0,
                 max_price: values.max_price || 0,
+                issueSize: values.issueSize || "",
                 isAllotmentOut: values.isAllotmentOut || false,
                 rhp_pdf: values.rhp_pdf || "",
                 drhp_pdf: values.drhp_pdf || "",
@@ -676,6 +679,19 @@ export function IPOForm({ onSubmit, initialValues, defaultType = "MAINBOARD" }: 
                                     <FormLabel>Current GMP (₹)</FormLabel>
                                     <FormControl>
                                         <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="issueSize"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Issue Size (Cr)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g. 500 Cr" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
