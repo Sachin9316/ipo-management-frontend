@@ -25,13 +25,13 @@ export const mainboardApi = apiSlice.injectEndpoints({
                     if (params.page) queryParams.append("page", params.page.toString());
                     if (params.limit) queryParams.append("limit", params.limit.toString());
                 }
-                return `v1/mainboards?${queryParams.toString()}`;
+                return `mainboard/mainboards?${queryParams.toString()}`;
             },
             providesTags: ['Mainboard'],
         }),
         createMainboard: builder.mutation<void, any>({
             query: (body) => ({
-                url: 'v1/mainboards',
+                url: 'mainboard/mainboards',
                 method: 'POST',
                 body,
             }),
@@ -39,7 +39,7 @@ export const mainboardApi = apiSlice.injectEndpoints({
         }),
         updateMainboard: builder.mutation<void, { id: string; data: any }>({
             query: ({ id, data }) => ({
-                url: `v1/mainboard/${id}`,
+                url: `mainboard/mainboard/${id}`,
                 method: 'PATCH',
                 body: data,
             }),
@@ -47,7 +47,7 @@ export const mainboardApi = apiSlice.injectEndpoints({
         }),
         deleteMainboard: builder.mutation<void, string>({
             query: (id) => ({
-                url: `v1/mainboard/${id}`,
+                url: `mainboard/mainboard/${id}`,
                 method: 'DELETE',
             }),
             invalidatesTags: ['Mainboard', 'Listed'],

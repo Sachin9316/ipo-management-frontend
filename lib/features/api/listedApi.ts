@@ -7,7 +7,7 @@ import { IPOData } from '@/app/dashboard/mainboard/columns'
 export const listedApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
         getListedIPOs: builder.query<IPOData[], void>({
-            query: () => 'v1/listed-ipos',
+            query: () => 'listed/listed-ipos',
             providesTags: ['Listed'],
             // Check if transformation is needed based on previous fetch logic:
             // setData(newData.data || newData);
@@ -17,7 +17,7 @@ export const listedApi = apiSlice.injectEndpoints({
         }),
         updateListedIPO: builder.mutation<void, { id: string; data: any }>({
             query: ({ id, data }) => ({
-                url: `v1/listed-ipo/${id}`,
+                url: `listed/listed-ipo/${id}`,
                 method: 'PUT',
                 body: data,
             }),
@@ -25,7 +25,7 @@ export const listedApi = apiSlice.injectEndpoints({
         }),
         deleteListedIPO: builder.mutation<void, string>({
             query: (id) => ({
-                url: `v1/listed-ipo/${id}`,
+                url: `listed/listed-ipo/${id}`,
                 method: 'DELETE',
             }),
             invalidatesTags: ['Listed'],

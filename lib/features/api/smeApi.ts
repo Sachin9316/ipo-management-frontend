@@ -7,13 +7,13 @@ export const smeApi = apiSlice.injectEndpoints({
             query: (params) => {
                 const queryParams = new URLSearchParams();
                 if (params && params.status) queryParams.append("status", params.status);
-                return `v1/sme-ipos?${queryParams.toString()}`;
+                return `sme/sme-ipos?${queryParams.toString()}`;
             },
             providesTags: ['SME'],
         }),
         createSMEIPO: builder.mutation<void, any>({
             query: (body) => ({
-                url: 'v1/sme-ipos',
+                url: 'sme/sme-ipos',
                 method: 'POST',
                 body,
             }),
@@ -21,7 +21,7 @@ export const smeApi = apiSlice.injectEndpoints({
         }),
         updateSMEIPO: builder.mutation<void, { id: string; data: any }>({
             query: ({ id, data }) => ({
-                url: `v1/sme-ipo/${id}`,
+                url: `sme/sme-ipo/${id}`,
                 method: 'PATCH',
                 body: data,
             }),
@@ -29,7 +29,7 @@ export const smeApi = apiSlice.injectEndpoints({
         }),
         deleteSMEIPO: builder.mutation<void, string>({
             query: (id) => ({
-                url: `v1/sme-ipo/${id}`,
+                url: `sme/sme-ipo/${id}`,
                 method: 'DELETE',
             }),
             invalidatesTags: ['SME'],
