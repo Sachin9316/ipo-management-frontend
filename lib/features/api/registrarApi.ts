@@ -3,12 +3,12 @@ import { apiSlice } from "../api/apiSlice";
 export const registrarApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
         getRegistrars: builder.query({
-            query: () => "v1/registrars",
+            query: () => "registrars/registrars",
             providesTags: ['Registrar'],
         }),
         createRegistrar: builder.mutation({
             query: (data) => ({
-                url: "v1/registrars",
+                url: "registrars/registrars",
                 method: "POST",
                 body: data,
             }),
@@ -16,7 +16,7 @@ export const registrarApi = apiSlice.injectEndpoints({
         }),
         updateRegistrar: builder.mutation({
             query: ({ id, data }) => ({
-                url: `v1/registrars/${id}`,
+                url: `registrars/registrars/${id}`,
                 method: "PUT",
                 body: data,
             }),
@@ -24,7 +24,7 @@ export const registrarApi = apiSlice.injectEndpoints({
         }),
         deleteRegistrar: builder.mutation({
             query: (id) => ({
-                url: `v1/registrars/${id}`,
+                url: `registrars/registrars/${id}`,
                 method: "DELETE",
             }),
             invalidatesTags: ['Registrar'],
