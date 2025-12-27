@@ -13,7 +13,8 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Trash } from "lucide-react"
+import { AlertModal } from "./alert-modal"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -37,13 +38,17 @@ interface DataTableProps<TData, TValue> {
     data: TData[]
     customFilter?: React.ReactNode
     filterColumnName?: string
+    onBulkDelete?: (selectedRows: TData[]) => void
+    bulkDeleteLoading?: boolean
 }
 
 export function DataTable<TData, TValue>({
     columns,
     data,
     customFilter,
-    filterColumnName = "companyName"
+    filterColumnName = "companyName",
+    onBulkDelete,
+    bulkDeleteLoading = false,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -52,6 +57,7 @@ export function DataTable<TData, TValue>({
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
+    const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false)
     const [pagination, setPagination] = React.useState({
         pageIndex: 0,
         pageSize: 10,
@@ -79,6 +85,15 @@ export function DataTable<TData, TValue>({
         },
     })
 
+    const onConfirmBulkDelete = () => {
+        if (onBulkDelete) {
+            const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
+            onBulkDelete(selectedRows)
+            setIsBulkDeleteModalOpen(false)
+            setRowSelection({})
+        }
+    }
+
     return (
         <div className="w-full">
             <div className="flex items-center py-4">
@@ -91,6 +106,27 @@ export function DataTable<TData, TValue>({
                     className="max-w-sm mr-4"
                 />
                 {customFilter}
+                {onBulkDelete && table.getSelectedRowModel().rows.length > 0 && (
+                    <>
+                        <AlertModal
+                            isOpen={isBulkDeleteModalOpen}
+                            onClose={() => setIsBulkDeleteModalOpen(false)}
+                            onConfirm={onConfirmBulkDelete}
+                            loading={bulkDeleteLoading}
+                            title={`Delete ${table.getSelectedRowModel().rows.length} items?`}
+                            description="Are you sure you want to delete the selected items? This action cannot be undone."
+                        />
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="ml-4"
+                            onClick={() => setIsBulkDeleteModalOpen(true)}
+                        >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete Selected ({table.getSelectedRowModel().rows.length})
+                        </Button>
+                    </>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="ml-auto">
@@ -107,7 +143,7 @@ export function DataTable<TData, TValue>({
                                         key={column.id}
                                         className="capitalize"
                                         checked={column.getIsVisible()}
-                                        onCheckedChange={(value) =>
+                                        onCheckedChange={(value: any) =>
                                             column.toggleVisibility(!!value)
                                         }
                                     >

@@ -52,6 +52,14 @@ export const mainboardApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['Mainboard', 'Listed'],
         }),
+        deleteMainboardBulk: builder.mutation<void, string[]>({
+            query: (ids) => ({
+                url: 'mainboard/mainboards/bulk-delete',
+                method: 'POST',
+                body: { ids },
+            }),
+            invalidatesTags: ['Mainboard', 'Listed'],
+        }),
     }),
 })
 
@@ -60,4 +68,5 @@ export const {
     useCreateMainboardMutation,
     useUpdateMainboardMutation,
     useDeleteMainboardMutation,
+    useDeleteMainboardBulkMutation,
 } = mainboardApi

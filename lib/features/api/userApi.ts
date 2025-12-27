@@ -37,6 +37,14 @@ export const userApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['User'],
         }),
+        deleteUsersBulk: builder.mutation<any, string[]>({
+            query: (ids) => ({
+                url: 'users/bulk-delete',
+                method: 'POST',
+                body: { ids },
+            }),
+            invalidatesTags: ['User'],
+        }),
     }),
 });
 
@@ -47,4 +55,5 @@ export const {
     useUpdateUserPanMutation,
     useUpdateUserMutation,
     useDeleteUserMutation,
+    useDeleteUsersBulkMutation,
 } = userApi;

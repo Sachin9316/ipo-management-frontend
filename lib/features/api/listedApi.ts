@@ -30,6 +30,14 @@ export const listedApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['Listed'],
         }),
+        deleteListedBulk: builder.mutation<void, string[]>({
+            query: (ids) => ({
+                url: 'listed/bulk-delete',
+                method: 'POST',
+                body: { ids },
+            }),
+            invalidatesTags: ['Listed', 'Mainboard'],
+        }),
     }),
 })
 
@@ -37,4 +45,5 @@ export const {
     useGetListedIPOsQuery,
     useUpdateListedIPOMutation,
     useDeleteListedIPOMutation,
+    useDeleteListedBulkMutation,
 } = listedApi

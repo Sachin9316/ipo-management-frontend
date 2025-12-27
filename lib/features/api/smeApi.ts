@@ -34,6 +34,14 @@ export const smeApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['SME'],
         }),
+        deleteSMEBulk: builder.mutation<void, string[]>({
+            query: (ids) => ({
+                url: 'sme/sme-ipos/bulk-delete',
+                method: 'POST',
+                body: { ids },
+            }),
+            invalidatesTags: ['SME'],
+        }),
     }),
 })
 
@@ -42,4 +50,5 @@ export const {
     useCreateSMEIPOMutation,
     useUpdateSMEIPOMutation,
     useDeleteSMEIPOMutation,
+    useDeleteSMEBulkMutation,
 } = smeApi

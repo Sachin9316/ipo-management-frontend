@@ -22,7 +22,8 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useGetRegistrarsQuery, useUpdateRegistrarMutation, useDeleteRegistrarMutation } from "@/lib/features/api/registrarApi"
+import { useGetRegistrarsQuery, useUpdateRegistrarMutation, useDeleteRegistrarMutation, useDeleteRegistrarsBulkMutation } from "@/lib/features/api/registrarApi"
+import { Checkbox } from "@/components/ui/checkbox"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
 import { RegistrarForm } from "@/components/registrar-form"
@@ -43,6 +44,7 @@ export function RegistrarList() {
     const { data: registrarsData, isLoading, isError } = useGetRegistrarsQuery(undefined)
     const [updateRegistrar] = useUpdateRegistrarMutation()
     const [deleteRegistrar] = useDeleteRegistrarMutation()
+    const [deleteRegistrarsBulk, { isLoading: isBulkDeleting }] = useDeleteRegistrarsBulkMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingRegistrar, setEditingRegistrar] = useState<Registrar | null>(null)
@@ -98,7 +100,42 @@ export function RegistrarList() {
         setPreviewOpen(true);
     }
 
+    const onConfirmBulkDelete = async (selectedRows: Registrar[]) => {
+        const ids = selectedRows.map(r => r._id).filter(Boolean);
+        if (ids.length === 0) return;
+
+        try {
+            await deleteRegistrarsBulk(ids).unwrap();
+            toast.success(`${ids.length} registrars deleted successfully`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error performing bulk delete");
+        }
+    }
+
     const columns: ColumnDef<Registrar>[] = useMemo(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: "name",
             header: ({ column }) => {
@@ -220,7 +257,7 @@ export function RegistrarList() {
                 </Link>
             </div>
 
-            <DataTable columns={columns} data={data} filterColumnName="name" />
+            <DataTable columns={columns} data={data} filterColumnName="name" onBulkDelete={onConfirmBulkDelete} bulkDeleteLoading={isBulkDeleting} />
         </div>
     )
 }

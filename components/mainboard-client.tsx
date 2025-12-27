@@ -34,9 +34,10 @@ import { IPOForm } from "@/components/ipo-form"
 import { IPOData } from "@/app/dashboard/mainboard/columns"
 import moment from "moment";
 import { toast } from "sonner"
-import { useGetMainboardsQuery, useCreateMainboardMutation, useUpdateMainboardMutation, useDeleteMainboardMutation } from "@/lib/features/api/mainboardApi"
+import { useGetMainboardsQuery, useCreateMainboardMutation, useUpdateMainboardMutation, useDeleteMainboardMutation, useDeleteMainboardBulkMutation } from "@/lib/features/api/mainboardApi"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function MainboardClient() {
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
@@ -44,6 +45,7 @@ export function MainboardClient() {
     const [createMainboard] = useCreateMainboardMutation()
     const [updateMainboard] = useUpdateMainboardMutation()
     const [deleteMainboard] = useDeleteMainboardMutation()
+    const [deleteMainboardBulk, { isLoading: isBulkDeleting }] = useDeleteMainboardBulkMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
@@ -107,7 +109,42 @@ export function MainboardClient() {
         setIsOpen(true);
     }
 
+    const handleBulkDelete = async (selectedRows: IPOData[]) => {
+        const ids = selectedRows.map(r => r._id || r.id).filter(Boolean) as string[];
+        if (ids.length === 0) return;
+
+        try {
+            await deleteMainboardBulk(ids).unwrap();
+            toast.success(`${ids.length} IPOs deleted successfully`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error performing bulk delete");
+        }
+    }
+
     const columns: ColumnDef<IPOData>[] = useMemo(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: "companyName",
             header: ({ column }) => {
@@ -301,6 +338,8 @@ export function MainboardClient() {
                 <DataTable
                     columns={columns}
                     data={mainBoardData?.data || []}
+                    onBulkDelete={handleBulkDelete}
+                    bulkDeleteLoading={isBulkDeleting}
                     customFilter={
                         <Select
                             value={statusFilter || "all"}

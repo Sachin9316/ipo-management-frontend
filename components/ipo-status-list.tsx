@@ -30,13 +30,16 @@ import { toast } from "sonner"
 import {
     useGetMainboardsQuery,
     useUpdateMainboardMutation,
-    useDeleteMainboardMutation
+    useDeleteMainboardMutation,
+    useDeleteMainboardBulkMutation
 } from "@/lib/features/api/mainboardApi"
 import {
     useGetSMEIPOsQuery,
     useUpdateSMEIPOMutation,
-    useDeleteSMEIPOMutation
+    useDeleteSMEIPOMutation,
+    useDeleteSMEBulkMutation
 } from "@/lib/features/api/smeApi"
+import { Checkbox } from "@/components/ui/checkbox"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
 import { ImageModal } from "@/components/ui/image-modal"
@@ -56,6 +59,8 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
     const [deleteMainboard] = useDeleteMainboardMutation()
     const [updateSME] = useUpdateSMEIPOMutation()
     const [deleteSME] = useDeleteSMEIPOMutation()
+    const [deleteMainboardBulk, { isLoading: isMainboardBulkDeleting }] = useDeleteMainboardBulkMutation()
+    const [deleteSMEBulk, { isLoading: isSMEBulkDeleting }] = useDeleteSMEBulkMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
@@ -129,7 +134,46 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
         setPreviewOpen(true);
     }
 
+    const handleBulkDelete = async (selectedRows: IPOData[]) => {
+        const ids = selectedRows.map(r => r._id || r.id).filter(Boolean) as string[];
+        if (ids.length === 0) return;
+
+        try {
+            if (isSME) {
+                await deleteSMEBulk(ids).unwrap();
+            } else {
+                await deleteMainboardBulk(ids).unwrap();
+            }
+            toast.success(`${ids.length} IPOs deleted successfully`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error performing bulk delete");
+        }
+    }
+
     const columns: ColumnDef<IPOData>[] = useMemo(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: "companyName",
             header: ({ column }) => {
@@ -374,7 +418,12 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
             ) : isError ? (
                 <div>Error loading data</div>
             ) : (
-                <DataTable columns={columns} data={filteredData} />
+                <DataTable
+                    columns={columns}
+                    data={filteredData}
+                    onBulkDelete={handleBulkDelete}
+                    bulkDeleteLoading={isSME ? isSMEBulkDeleting : isMainboardBulkDeleting}
+                />
             )}
         </div>
     )

@@ -26,7 +26,8 @@ import { IPOForm } from "@/components/ipo-form"
 import { IPOData } from "@/app/dashboard/mainboard/columns"
 import moment from "moment";
 import { toast } from "sonner"
-import { useGetListedIPOsQuery, useUpdateListedIPOMutation, useDeleteListedIPOMutation } from "@/lib/features/api/listedApi"
+import { useGetListedIPOsQuery, useUpdateListedIPOMutation, useDeleteListedIPOMutation, useDeleteListedBulkMutation } from "@/lib/features/api/listedApi"
+import { Checkbox } from "@/components/ui/checkbox"
 import { AlertModal } from "@/components/ui/alert-modal"
 
 interface ListedClientProps {
@@ -37,6 +38,7 @@ export function ListedClient({ initialData }: ListedClientProps) {
     const { data: qData, isLoading } = useGetListedIPOsQuery()
     const [updateListedIPO] = useUpdateListedIPOMutation()
     const [deleteListedIPO] = useDeleteListedIPOMutation()
+    const [deleteListedBulk, { isLoading: isBulkDeleting }] = useDeleteListedBulkMutation()
 
     const data = qData || initialData || []
 
@@ -82,7 +84,42 @@ export function ListedClient({ initialData }: ListedClientProps) {
         }
     }
 
+    const onConfirmBulkDelete = async (selectedRows: IPOData[]) => {
+        const ids = selectedRows.map(r => r.id || r._id).filter(Boolean) as string[];
+        if (ids.length === 0) return;
+
+        try {
+            await deleteListedBulk(ids).unwrap();
+            toast.success(`${ids.length} listed IPOs deleted successfully`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error performing bulk delete");
+        }
+    }
+
     const columns: ColumnDef<IPOData>[] = useMemo(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: "companyName",
             header: ({ column }) => {
@@ -275,7 +312,7 @@ export function ListedClient({ initialData }: ListedClientProps) {
                     </div>
                 </SheetContent>
             </Sheet>
-            <DataTable columns={columns} data={data} />
+            <DataTable columns={columns} data={data} onBulkDelete={onConfirmBulkDelete} bulkDeleteLoading={isBulkDeleting} />
         </div>
     )
 }

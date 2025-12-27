@@ -17,11 +17,13 @@ import {
 import { IPOForm } from "@/components/ipo-form"
 import { IPOData } from "@/app/dashboard/mainboard/columns"
 import { toast } from "sonner"
-import { useGetMainboardsQuery, useUpdateMainboardMutation } from "@/lib/features/api/mainboardApi"
+import { useGetMainboardsQuery, useUpdateMainboardMutation, useDeleteMainboardBulkMutation } from "@/lib/features/api/mainboardApi"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function GMPManager() {
     const { data: mainBoardData, isLoading, isError, isFetching } = useGetMainboardsQuery()
     const [updateMainboard] = useUpdateMainboardMutation()
+    const [deleteMainboardBulk, { isLoading: isBulkDeleting }] = useDeleteMainboardBulkMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
@@ -51,7 +53,42 @@ export function GMPManager() {
         setIsOpen(true);
     }
 
+    const onConfirmBulkDelete = async (selectedRows: IPOData[]) => {
+        const ids = selectedRows.map(r => r._id || r.id).filter(Boolean) as string[];
+        if (ids.length === 0) return;
+
+        try {
+            await deleteMainboardBulk(ids).unwrap();
+            toast.success(`${ids.length} IPOs deleted successfully`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error performing bulk delete");
+        }
+    }
+
     const columns: ColumnDef<IPOData>[] = useMemo(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: "companyName",
             header: ({ column }) => {
@@ -184,7 +221,7 @@ export function GMPManager() {
             ) : isError ? (
                 <div>Error loading data</div>
             ) : (
-                <DataTable columns={columns} data={filteredData} />
+                <DataTable columns={columns} data={filteredData} onBulkDelete={onConfirmBulkDelete} bulkDeleteLoading={isBulkDeleting} />
             )}
         </div>
     )

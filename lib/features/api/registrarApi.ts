@@ -29,6 +29,14 @@ export const registrarApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['Registrar'],
         }),
+        deleteRegistrarsBulk: builder.mutation({
+            query: (ids) => ({
+                url: "registrars/registrars/bulk-delete",
+                method: "POST",
+                body: { ids },
+            }),
+            invalidatesTags: ['Registrar'],
+        }),
     }),
 });
 
@@ -37,4 +45,5 @@ export const {
     useCreateRegistrarMutation,
     useUpdateRegistrarMutation,
     useDeleteRegistrarMutation,
+    useDeleteRegistrarsBulkMutation,
 } = registrarApi;

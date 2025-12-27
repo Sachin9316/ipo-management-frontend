@@ -34,7 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { toast } from "sonner"
-import { useGetCustomersQuery, useUpdateUserPanMutation, useUpdateUserMutation, useDeleteUserMutation } from "@/lib/features/api/userApi"
+import { useGetCustomersQuery, useUpdateUserPanMutation, useUpdateUserMutation, useDeleteUserMutation, useDeleteUsersBulkMutation } from "@/lib/features/api/userApi"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -68,6 +69,7 @@ export function UserManager() {
     const [updateUserPan] = useUpdateUserPanMutation()
     const [updateUser] = useUpdateUserMutation()
     const [deleteUser] = useDeleteUserMutation()
+    const [deleteUsersBulk, { isLoading: isBulkDeleting }] = useDeleteUsersBulkMutation()
 
     // State
     const [isPanSheetOpen, setIsPanSheetOpen] = useState(false)
@@ -160,7 +162,42 @@ export function UserManager() {
         }
     }
 
+    const onBulkDelete = async (selectedRows: any[]) => {
+        const ids = selectedRows.map(r => r._id).filter(Boolean);
+        if (ids.length === 0) return;
+
+        try {
+            await deleteUsersBulk(ids).unwrap();
+            toast.success(`${ids.length} users removed successfully`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error performing bulk delete");
+        }
+    }
+
     const columns: ColumnDef<any>[] = useMemo(() => [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: "name",
             header: ({ column }) => (
@@ -397,7 +434,7 @@ export function UserManager() {
                     Error loading users: {(error as any)?.data?.message || (error as any)?.error || "Unknown error"}
                 </div>
             ) : (
-                <DataTable columns={columns} data={users || []} />
+                <DataTable columns={columns} data={users || []} onBulkDelete={onBulkDelete} bulkDeleteLoading={isBulkDeleting} filterColumnName="fullName" />
             )}
         </div>
     )
