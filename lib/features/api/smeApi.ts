@@ -7,6 +7,7 @@ export const smeApi = apiSlice.injectEndpoints({
             query: (params) => {
                 const queryParams = new URLSearchParams();
                 if (params && params.status) queryParams.append("status", params.status);
+                queryParams.append("limit", "1000");
                 return `sme/sme-ipos?${queryParams.toString()}`;
             },
             providesTags: ['SME'],

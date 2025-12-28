@@ -24,6 +24,9 @@ export const mainboardApi = apiSlice.injectEndpoints({
                     if (params.ipoType) queryParams.append("ipoType", params.ipoType);
                     if (params.page) queryParams.append("page", params.page.toString());
                     if (params.limit) queryParams.append("limit", params.limit.toString());
+                    else queryParams.append("limit", "1000");
+                } else {
+                    queryParams.append("limit", "1000");
                 }
                 return `mainboard/mainboards?${queryParams.toString()}`;
             },

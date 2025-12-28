@@ -5,11 +5,41 @@ import { useGetListedIPOsQuery } from "@/lib/features/api/listedApi"
 import { useGetSMEIPOsQuery } from "@/lib/features/api/smeApi"
 import { OverviewCards } from "@/components/dashboard/overview-cards"
 import { RecentListingsChart } from "@/components/dashboard/recent-listings-chart"
+import { Button } from "@/components/ui/button"
+import { useSyncScrapedDataMutation, useSyncGMPDataMutation } from "@/lib/features/api/scraperApi"
+import { toast } from "sonner"
+import { RefreshCw } from "lucide-react"
+import { useState } from "react"
 
 export default function DashboardPage() {
     const { data: mainboardData } = useGetMainboardsQuery()
     const { data: listedData } = useGetListedIPOsQuery()
     const { data: smeData } = useGetSMEIPOsQuery()
+
+    const [syncScraper] = useSyncScrapedDataMutation()
+    const [syncGMP] = useSyncGMPDataMutation()
+    const [isSyncing, setIsSyncing] = useState(false)
+
+    const handleManualSync = async () => {
+        setIsSyncing(true)
+        const toastId = toast.loading("Syncing IPO and GMP data...")
+        try {
+            console.log("Starting manual sync...")
+            // Run them sequentially or in parallel? Parallel is faster.
+            const [scraperResult, gmpResult] = await Promise.all([
+                syncScraper(10).unwrap(),
+                syncGMP().unwrap()
+            ])
+
+            console.log("Sync completed:", { scraperResult, gmpResult })
+            toast.success(`Sync successful! Updated IPOs and GMP.`, { id: toastId })
+        } catch (error: any) {
+            console.error("Manual sync failed:", error)
+            toast.error(`Sync failed: ${error?.data?.message || error.message || "Unknown error"}`, { id: toastId })
+        } finally {
+            setIsSyncing(false)
+        }
+    }
 
     // Aggregate data
     // Handle potential { data: [...] } structure or direct array
@@ -41,6 +71,16 @@ export default function DashboardPage() {
         <div className="flex-1 space-y-4 p-8 pt-6">
             <div className="flex items-center justify-between space-y-2">
                 <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+                <div className="flex items-center space-x-2">
+                    <Button
+                        onClick={handleManualSync}
+                        disabled={isSyncing}
+                        className="flex items-center gap-2"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                        {isSyncing ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                </div>
             </div>
             <OverviewCards
                 totalIPOs={totalIPOs}

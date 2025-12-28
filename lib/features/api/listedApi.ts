@@ -7,7 +7,7 @@ import { IPOData } from '@/app/dashboard/mainboard/columns'
 export const listedApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
         getListedIPOs: builder.query<IPOData[], void>({
-            query: () => 'listed/listed-ipos',
+            query: () => 'listed/listed-ipos?limit=1000',
             providesTags: ['Listed'],
             // Check if transformation is needed based on previous fetch logic:
             // setData(newData.data || newData);
