@@ -46,6 +46,11 @@ export type IPOData = {
     lot_price: number
     bse_code_nse_code: string
     isAllotmentOut: boolean
+    issueSize?: string
+    min_price?: number
+    max_price?: number
+    registrarName?: string
+    registrarLink?: string
 }
 
 export const columns: ColumnDef<IPOData>[] = [
@@ -119,11 +124,57 @@ export const columns: ColumnDef<IPOData>[] = [
         }
     },
     {
+        accessorKey: "issueSize",
+        header: "Issue Size",
+        cell: ({ row }) => <div className="whitespace-nowrap">{row.getValue("issueSize") || "N/A"}</div>
+    },
+    {
+        id: "price_band",
+        header: "Price Band",
+        cell: ({ row }) => {
+            const min = row.original.min_price;
+            const max = row.original.max_price;
+            if (!min && !max) return <div>-</div>
+            if (min === max) return <div>₹{max}</div>
+            return <div className="whitespace-nowrap">₹{min} - ₹{max}</div>
+        }
+    },
+    {
+        accessorKey: "lot_size",
+        header: "Lot Size",
+        cell: ({ row }) => <div>{row.getValue("lot_size")}</div>
+    },
+    {
+        accessorKey: "registrarName",
+        header: "Registrar",
+        cell: ({ row }) => {
+            const name = row.original.registrarName || "N/A";
+            const link = row.original.registrarLink;
+            if (link && link.startsWith('http')) {
+                return (
+                    <a href={link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline max-w-[150px] truncate block" title={name}>
+                        {name}
+                    </a>
+                )
+            }
+            return <div className="max-w-[150px] truncate" title={name}>{name}</div>
+        }
+    },
+    {
+        accessorKey: "listing_date",
+        header: "Listing Date",
+        cell: ({ row }) => {
+            const date = row.getValue("listing_date");
+            if (!date) return <div>-</div>
+            return <div>{format(new Date(date as string), "dd MMM")}</div>
+        }
+    },
+    {
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
             const payment = row.original
-
+            // ... existing action cell content ...
             return (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -136,12 +187,13 @@ export const columns: ColumnDef<IPOData>[] = [
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
                             onClick={() => navigator.clipboard.writeText(payment.id || payment._id || "")}
+                            className="cursor-pointer"
                         >
                             Copy ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>View details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit details</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer">View details</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer">Edit details</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             )

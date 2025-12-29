@@ -257,6 +257,47 @@ export function SMEClient() {
             }
         },
         {
+            accessorKey: "issueSize",
+            header: "Issue Size",
+            cell: ({ row }) => <div className="whitespace-nowrap">{row.getValue("issueSize") || "N/A"}</div>
+        },
+        {
+            id: "price_band",
+            header: "Price Band",
+            cell: ({ row }) => {
+                const min = row.original.min_price;
+                const max = row.original.max_price;
+                if (!min && !max) return <div>-</div>
+                if (min === max) return <div>₹{max}</div>
+                return <div className="whitespace-nowrap">₹{min} - ₹{max}</div>
+            }
+        },
+        {
+            accessorKey: "registrarName",
+            header: "Registrar",
+            cell: ({ row }) => {
+                const name = row.original.registrarName || "N/A";
+                const link = row.original.registrarLink;
+                if (link && link.startsWith('http')) {
+                    return (
+                        <a href={link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline max-w-[150px] truncate block" title={name}>
+                            {name}
+                        </a>
+                    )
+                }
+                return <div className="max-w-[150px] truncate" title={name}>{name}</div>
+            }
+        },
+        {
+            accessorKey: "listing_date",
+            header: "Listing Date",
+            cell: ({ row }) => {
+                const date = row.getValue("listing_date");
+                if (!date) return <div>-</div>
+                return <div>{moment(date).format('ll')}</div>
+            }
+        },
+        {
             id: "actions",
             enableHiding: false,
             cell: ({ row }) => {
@@ -272,10 +313,10 @@ export function SMEClient() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditClick(row.original)}>
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => handleEditClick(row.original)}>
                                 <Pencil className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDelete(id || "")} className="text-red-600">
+                            <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => onDelete(id || "")}>
                                 <Trash className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                         </DropdownMenuContent>
