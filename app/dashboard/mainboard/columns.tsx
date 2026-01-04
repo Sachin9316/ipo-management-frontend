@@ -44,7 +44,6 @@ export type IPOData = {
     allotment_date: string
     lot_size: number
     lot_price: number
-    bse_code_nse_code: string
     isAllotmentOut: boolean
     issueSize?: string
     min_price?: number
@@ -120,7 +119,7 @@ export const columns: ColumnDef<IPOData>[] = [
             } else if (typeof sub === 'number') {
                 total = sub;
             }
-            return <div>{total}x</div>
+            return <div>{total.toFixed(2)}x</div>
         }
     },
     {
@@ -174,7 +173,6 @@ export const columns: ColumnDef<IPOData>[] = [
         enableHiding: false,
         cell: ({ row }) => {
             const payment = row.original
-            // ... existing action cell content ...
             return (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -35,15 +35,35 @@ export const ImageModal: React.FC<ImageModalProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-transparent border-none shadow-none text-white">
+            <DialogContent className="max-w-fit w-auto p-0 overflow-visible bg-transparent border-none shadow-none text-white [&>button]:hidden">
                 <DialogHeader className="sr-only">
                     <DialogTitle>{title}</DialogTitle>
                 </DialogHeader>
-                <div className="relative w-full h-full flex items-center justify-center p-4">
+                <div className="relative flex items-center justify-center">
+                    <button
+                        onClick={onClose}
+                        className="absolute cursor-pointer -right-12 -top-12 z-50 rounded-full bg-white p-1 text-black shadow-lg hover:bg-gray-100 focus:outline-none"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                        </svg>
+                        <span className="sr-only">Close</span>
+                    </button>
                     <img
                         src={imageUrl}
                         alt={title}
-                        className="max-w-[80vw] max-h-[80vh] object-contain rounded-md shadow-2xl"
+                        className="w-full h-full object-contain object-center shadow-2xl rounded-md"
                     />
                 </div>
             </DialogContent>
