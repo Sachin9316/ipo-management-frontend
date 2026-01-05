@@ -25,7 +25,7 @@ export function ActivityFeed({ ipos }: ActivityFeedProps) {
         }
         if (close.isSame(today, 'day')) {
             evts.push({ type: 'Closing Today', date: close, name, color: 'text-red-600' });
-        } else if (close.isBetween(today, threeDaysFromNow, 'day', ']')) {
+        } else if (close.isBetween(today, threeDaysFromNow, 'day', '(]')) {
             evts.push({ type: 'Closing Soon', date: close, name, color: 'text-orange-600' });
         }
         if (list.isBetween(today, threeDaysFromNow, 'day', '[]')) {
