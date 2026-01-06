@@ -75,6 +75,7 @@ const formSchema = z.object({
     listing_price: z.coerce.number().optional().default(0),
     listing_day_high: z.coerce.number().optional().default(0),
     listing_day_low: z.coerce.number().optional().default(0),
+    kfintech_client_id: z.string().optional(),
 }).superRefine((data, ctx) => {
     if (data.status === "CLOSED" || data.status === "LISTED") {
         if (!data.registrarName?.trim()) {
@@ -125,6 +126,7 @@ const transformInitialValues = (values: any) => {
         drhp_pdf: values.drhp_pdf || "",
         registrarName: values.registrarName || "",
         registrarLink: values.registrarLink || "",
+        kfintech_client_id: values.kfintech_client_id || "",
     };
 
     // Transform dates
@@ -267,6 +269,7 @@ export function IPOForm({
             listing_price: initialValues?.listing_price || 0,
             listing_day_high: initialValues?.listing_day_high || 0,
             listing_day_low: initialValues?.listing_day_low || 0,
+            kfintech_client_id: initialValues?.kfintech_client_id || "",
         },
     })
 
@@ -980,6 +983,24 @@ export function IPOForm({
                                     <FormControl>
                                         <Input placeholder="https://..." {...field} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="mt-4">
+                        <FormField
+                            control={form.control}
+                            name="kfintech_client_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>KFintech Client ID (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g. 123456" {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                        Required only if the IPO is not found automatically by name.
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
