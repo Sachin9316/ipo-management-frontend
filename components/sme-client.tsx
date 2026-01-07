@@ -382,6 +382,7 @@ export function SMEClient() {
                             <SelectItem value="UPCOMING">Upcoming</SelectItem>
                             <SelectItem value="LISTED">Listed</SelectItem>
                             <SelectItem value="CLOSED">Closed</SelectItem>
+                            <SelectItem value="CLOSED,LISTED">Closed & Listed</SelectItem>
                         </SelectContent>
                     </Select>
                 }

@@ -77,7 +77,17 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
         // Let's normalize based on common structure
         const data = Array.isArray(rawData) ? rawData : (rawData as any)?.data || []
         if (!status) return data
-        const targetStatus = status.toUpperCase();
+
+        let targetStatus = status.toUpperCase();
+        if (targetStatus === 'CLOSED-LISTED') {
+            targetStatus = 'CLOSED,LISTED';
+        }
+
+        if (targetStatus.includes(',')) {
+            const statuses = targetStatus.split(',').map(s => s.trim());
+            return data.filter((item: IPOData) => statuses.includes(item.status));
+        }
+
         return data.filter((item: IPOData) => item.status === targetStatus)
     }, [rawData, status])
 
@@ -389,7 +399,9 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
             />
 
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold capitalize">{status ? `${status} IPOs` : 'All IPOs'}</h1>
+                <h1 className="text-2xl font-bold capitalize">
+                    {status === 'closed-listed' ? 'Closed & Listed IPOs' : status ? `${status} IPOs` : 'All IPOs'}
+                </h1>
             </div>
 
             <Sheet open={isOpen} onOpenChange={(open) => {

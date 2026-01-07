@@ -101,12 +101,8 @@ const items = [
                         url: "/dashboard/ipos/open",
                     },
                     {
-                        title: "Closed IPOs",
-                        url: "/dashboard/ipos/closed",
-                    },
-                    {
-                        title: "Listed IPOs",
-                        url: "/dashboard/ipos/listed",
+                        title: "Closed & Listed",
+                        url: "/dashboard/ipos/closed-listed",
                     },
                 ],
             },
@@ -124,12 +120,8 @@ const items = [
                         url: "/dashboard/sme/open",
                     },
                     {
-                        title: "Closed SME",
-                        url: "/dashboard/sme/closed",
-                    },
-                    {
-                        title: "Listed SME",
-                        url: "/dashboard/sme/listed",
+                        title: "Closed & Listed",
+                        url: "/dashboard/sme/closed-listed",
                     },
                 ],
             },
