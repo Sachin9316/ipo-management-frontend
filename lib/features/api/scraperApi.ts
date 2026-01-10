@@ -9,6 +9,20 @@ export const scraperApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['Mainboard', 'SME', 'Listed'],
         }),
+        syncMainboardData: builder.mutation<any, number | void>({
+            query: (limit = 10) => ({
+                url: `/scraper/sync-mainboard?limit=${limit}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Mainboard', 'Listed'],
+        }),
+        syncSMEData: builder.mutation<any, number | void>({
+            query: (limit = 10) => ({
+                url: `/scraper/sync-sme?limit=${limit}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['SME', 'Listed'],
+        }),
         syncGMPData: builder.mutation<any, void>({
             query: () => ({
                 url: '/scraper/sync-gmp',
@@ -24,6 +38,8 @@ export const scraperApi = apiSlice.injectEndpoints({
 
 export const {
     useSyncScrapedDataMutation,
+    useSyncMainboardDataMutation,
+    useSyncSMEDataMutation,
     useSyncGMPDataMutation,
     useLazyPreviewScrapedDataQuery
 } = scraperApi;
