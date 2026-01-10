@@ -5,10 +5,18 @@ import { useGetListedIPOsQuery } from "@/lib/features/api/listedApi"
 import { useGetSMEIPOsQuery } from "@/lib/features/api/smeApi"
 import { RecentListingsChart } from "@/components/dashboard/recent-listings-chart"
 import { Button } from "@/components/ui/button"
-import { useSyncScrapedDataMutation, useSyncGMPDataMutation } from "@/lib/features/api/scraperApi"
+import { useSyncScrapedDataMutation, useSyncGMPDataMutation, useSyncMainboardDataMutation, useSyncSMEDataMutation } from "@/lib/features/api/scraperApi"
 import { toast } from "sonner"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, ChevronDown, Rocket, Briefcase } from "lucide-react"
 import { useState } from "react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { DetailedStats } from "@/components/dashboard/detailed-stats"
 import { CategoryStats } from "@/components/dashboard/category-stats"
 import { SubscriptionTrendChart } from "@/components/dashboard/subscription-chart"
@@ -22,18 +30,31 @@ export default function DashboardPage() {
     const { data: smeData } = useGetSMEIPOsQuery()
 
     const [syncScraper] = useSyncScrapedDataMutation()
+    const [syncMainboard] = useSyncMainboardDataMutation()
+    const [syncSME] = useSyncSMEDataMutation()
     const [syncGMP] = useSyncGMPDataMutation()
     const [isSyncing, setIsSyncing] = useState(false)
 
-    const handleManualSync = async () => {
+    const handleSync = async (type: 'ALL' | 'MAINBOARD' | 'SME' | 'GMP') => {
         setIsSyncing(true)
-        const toastId = toast.loading("Syncing IPO and GMP data...")
+        const labels = {
+            'ALL': 'Full Data',
+            'MAINBOARD': 'Mainboard IPOs',
+            'SME': 'SME IPOs',
+            'GMP': 'GMP Data'
+        }
+        const toastId = toast.loading(`Syncing ${labels[type]}...`)
         try {
-            const [scraperResult, gmpResult] = await Promise.all([
-                syncScraper(10).unwrap(),
-                syncGMP().unwrap()
-            ])
-            toast.success(`Sync successful! Updated IPOs and GMP.`, { id: toastId })
+            if (type === 'ALL') {
+                await Promise.all([syncScraper(10).unwrap(), syncGMP().unwrap()])
+            } else if (type === 'MAINBOARD') {
+                await syncMainboard(10).unwrap()
+            } else if (type === 'SME') {
+                await syncSME(10).unwrap()
+            } else if (type === 'GMP') {
+                await syncGMP().unwrap()
+            }
+            toast.success(`${labels[type]} sync successful!`, { id: toastId })
         } catch (error: any) {
             toast.error(`Sync failed: ${error?.data?.message || error.message || "Unknown error"}`, { id: toastId })
         } finally {
@@ -140,14 +161,35 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between space-y-2">
                 <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
                 <div className="flex items-center space-x-2">
-                    <Button
-                        onClick={handleManualSync}
-                        disabled={isSyncing}
-                        className="flex items-center gap-2"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? 'Sync Data' : 'Sync Data'}
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button disabled={isSyncing} className="flex items-center gap-2">
+                                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                                {isSyncing ? 'Syncing...' : 'Sync Data'}
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[200px]">
+                            <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleSync('ALL')} className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4" />
+                                <span>Sync All (IPOs + GMP)</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSync('MAINBOARD')} className="flex items-center gap-2">
+                                <Briefcase className="h-4 w-4" />
+                                <span>Sync Mainboard Only</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSync('SME')} className="flex items-center gap-2">
+                                <Rocket className="h-4 w-4" />
+                                <span>Sync SME Only</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSync('GMP')} className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4" />
+                                <span>Sync GMP Only</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
