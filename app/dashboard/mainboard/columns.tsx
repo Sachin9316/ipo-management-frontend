@@ -46,8 +46,10 @@ export type IPOData = {
     lot_price: number
     isAllotmentOut: boolean
     issueSize?: string
+    issueSize?: string
     min_price?: number
     max_price?: number
+    est_profit?: number
     registrarName?: string
     registrarLink?: string
 }
@@ -136,6 +138,24 @@ export const columns: ColumnDef<IPOData>[] = [
             if (!min && !max) return <div>-</div>
             if (min === max) return <div>₹{max}</div>
             return <div className="whitespace-nowrap">₹{min} - ₹{max}</div>
+        }
+    },
+    {
+        id: "est_profit",
+        header: "Est. Profit",
+        cell: ({ row }) => {
+            const p = row.original.est_profit;
+            if (p === undefined || p === null) return <div>-</div>;
+            const formatted = new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0
+            }).format(p);
+
+            // Color coding: Green > 0, Red < 0, Gray = 0
+            const colorClass = p > 0 ? "text-green-600" : p < 0 ? "text-red-600" : "text-gray-500";
+
+            return <div className={`font-semibold ${colorClass}`}>{formatted}</div>
         }
     },
     {

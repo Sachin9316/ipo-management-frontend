@@ -174,38 +174,35 @@ export function MainboardClient() {
             }
         },
         {
-            id: "listing_gain",
-            header: "Listing Gain",
+            id: "est_profit",
+            header: "Est. Profit",
             cell: ({ row }) => {
-                const val = row.getValue("gmp");
-                let gmp = 0;
-                if (Array.isArray(val) && val.length > 0) {
-                    gmp = val[val.length - 1].price || 0;
-                } else if (typeof val === 'number') {
-                    gmp = val;
-                } else if (typeof val === 'string') {
-                    gmp = parseFloat(val);
+                const p = row.original.est_profit;
+                if (p === undefined || p === null) return <div>-</div>;
+                const formatted = new Intl.NumberFormat("en-IN", {
+                    style: "currency",
+                    currency: "INR",
+                    maximumFractionDigits: 0
+                }).format(p);
+
+                // Color coding: Green > 0, Red < 0, Gray = 0
+                const colorClass = p > 0 ? "text-green-600" : p < 0 ? "text-red-600" : "text-gray-500";
+
+                const lotPrice = row.getValue<number>("lot_price") || 0;
+                let percentage = 0;
+                if (lotPrice > 0) {
+                    percentage = (p / lotPrice) * 100;
                 }
-
-                const lotSize = row.getValue<number>("lot_size") || 0
-                const lotPrice = row.getValue<number>("lot_price") || 0
-
-                if (lotPrice === 0 || lotSize === 0) return <div>-</div>
-
-                const totalGain = gmp * lotSize;
-                const gainPercentage = (totalGain / lotPrice) * 100;
 
                 return (
                     <div className="flex flex-col">
-                        <span className="font-bold text-green-600">
-                            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(totalGain)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                            ({gainPercentage.toFixed(2)}%)
-                        </span>
+                        <span className={`font-semibold ${colorClass}`}>{formatted}</span>
+                        {percentage !== 0 && (
+                            <span className="text-xs text-muted-foreground">({percentage.toFixed(2)}%)</span>
+                        )}
                     </div>
                 )
-            },
+            }
         },
         {
             accessorKey: "status",
@@ -231,9 +228,23 @@ export function MainboardClient() {
                 const formatted = new Intl.NumberFormat("en-IN", {
                     style: "currency",
                     currency: "INR",
+                    maximumFractionDigits: 0
                 }).format(amount)
 
-                return <div className="font-medium text-green-600">{formatted}</div>
+                const basePrice = row.original.max_price || row.original.min_price || 0;
+                let percentage = 0;
+                if (basePrice > 0) {
+                    percentage = (amount / basePrice) * 100;
+                }
+
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-medium text-green-600">{formatted}</span>
+                        {percentage > 0 && (
+                            <span className="text-xs text-muted-foreground">({percentage.toFixed(2)}%)</span>
+                        )}
+                    </div>
+                )
             },
         },
         {
