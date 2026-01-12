@@ -63,6 +63,20 @@ export const mainboardApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['Mainboard', 'Listed'],
         }),
+        manualUpdateMainboard: builder.mutation<void, { id: string; data: any }>({
+            query: ({ id, data }) => ({
+                url: `mainboard/edit/${id}`,
+                method: 'PATCH',
+                body: data,
+            }),
+            invalidatesTags: ['Mainboard', 'Listed'],
+        }),
+        getMainboardForEdit: builder.query<{ success: boolean; data: IPOData }, string>({
+            query: (id) => `mainboard/edit/${id}`,
+            // We do NOT provide tags here to avoid caching this specific edit fetch generally?
+            // Actually, we want it fresh.
+            keepUnusedDataFor: 0, // Ensure we always fetch fresh when opening edit form
+        }),
     }),
 })
 
@@ -72,4 +86,7 @@ export const {
     useUpdateMainboardMutation,
     useDeleteMainboardMutation,
     useDeleteMainboardBulkMutation,
+    useManualUpdateMainboardMutation,
+    useGetMainboardForEditQuery,
+    useLazyGetMainboardForEditQuery
 } = mainboardApi

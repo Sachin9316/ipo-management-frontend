@@ -44,7 +44,7 @@ const formSchema = z.object({
     slug: z.string(),
     icon: z.string().optional(),
     ipoType: z.enum(["MAINBOARD", "SME"]).optional(),
-    status: z.enum(["UPCOMING", "OPEN", "CLOSED", "LISTED"]),
+    status: z.enum(["UPCOMING", "OPEN", "CLOSED", "LISTED", "CANCELLED"]),
     subscription_qib: z.coerce.number().optional().default(0),
     subscription_nii: z.coerce.number().optional().default(0),
     subscription_bnii: z.coerce.number().optional().default(0),
@@ -224,7 +224,6 @@ export function IPOForm({
 }) {
     const { data: registrarsData } = useGetRegistrarsQuery(undefined)
     const registrars = registrarsData?.registrars || []
-
     const [loading, setLoading] = useState(false)
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.icon || null)
@@ -237,7 +236,7 @@ export function IPOForm({
             companyName: initialValues?.companyName || "",
             slug: initialValues?.slug || "",
             icon: initialValues?.icon || "",
-            ipoType: defaultType as "MAINBOARD" | "SME",
+            ipoType: initialValues?.ipoType || defaultType,
             status: initialValues?.status || "UPCOMING",
             subscription_qib: initialValues?.subscription_qib || 0,
             subscription_nii: initialValues?.subscription_nii || 0,
@@ -555,6 +554,7 @@ export function IPOForm({
                                             <SelectItem value="OPEN">Open</SelectItem>
                                             <SelectItem value="CLOSED">Closed</SelectItem>
                                             <SelectItem value="LISTED">Listed</SelectItem>
+                                            <SelectItem value="CANCELLED">Cancelled</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -751,7 +751,7 @@ export function IPOForm({
                             <h4 className="font-medium text-sm">Estimated Listing Gain</h4>
                             <p className="text-xs text-muted-foreground">Based on current GMP and Lot Size</p>
                         </div>
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className={`text-2xl font-bold ${estimatedGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             ₹{estimatedGain.toLocaleString('en-IN')}
                         </div>
                     </div>
@@ -943,7 +943,7 @@ export function IPOForm({
                                         onValueChange={(value) => {
                                             const selected = registrars.find((r: any) => r.name === value);
                                             field.onChange(value);
-                                            if (selected) {
+                                            if (selected && selected.websiteLink) {
                                                 form.setValue("registrarLink", selected.websiteLink);
                                             }
                                         }}
