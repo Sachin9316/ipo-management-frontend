@@ -7,6 +7,10 @@ interface User {
     role: string;
     isVerified: boolean;
     profileImage?: string;
+    emailPreferences?: {
+        newIpo: boolean;
+        gmpUpdate: boolean;
+    };
 }
 
 interface AuthState {

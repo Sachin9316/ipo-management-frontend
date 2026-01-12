@@ -3,6 +3,10 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { useAppDispatch, useAppSelector } from "@/lib/hooks"
+import { selectCurrentUser, setCredentials } from "@/lib/features/auth/authSlice"
+import { useUpdateUserMutation } from "@/lib/features/auth/authApiSlice"
+import { useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,18 +39,49 @@ const settingsSchema = z.object({
 })
 
 export default function SettingsPage() {
+    const user = useAppSelector(selectCurrentUser)
+    const [updateUser, { isLoading }] = useUpdateUserMutation()
+    const dispatch = useAppDispatch()
+
     const form = useForm<z.infer<typeof settingsSchema>>({
         resolver: zodResolver(settingsSchema),
         defaultValues: {
             currency: "INR",
-            notifications: true,
+            notifications: user?.emailPreferences?.newIpo ?? true,
             theme: "light",
         },
     })
 
-    function onSubmit(data: z.infer<typeof settingsSchema>) {
-        toast.success("Settings updated successfully")
-        console.log(data)
+    // Update form when user data loads
+    useEffect(() => {
+        if (user?.emailPreferences) {
+            form.setValue('notifications', user.emailPreferences.newIpo)
+        }
+    }, [user, form])
+
+    async function onSubmit(data: z.infer<typeof settingsSchema>) {
+        try {
+            const updatedData = {
+                ...user,
+                emailPreferences: {
+                    ...user?.emailPreferences,
+                    newIpo: data.notifications
+                }
+            }
+
+            const result = await updateUser({
+                emailPreferences: JSON.stringify(updatedData.emailPreferences)
+            }).unwrap()
+
+            dispatch(setCredentials({
+                user: result,
+                token: localStorage.getItem("token") || ""
+            }))
+
+            toast.success("Settings updated successfully")
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to update settings")
+        }
     }
 
     return (
@@ -114,7 +149,9 @@ export default function SettingsPage() {
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit">Update settings</Button>
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading ? "Updating..." : "Update settings"}
+                            </Button>
                         </form>
                     </Form>
                 </CardContent>
