@@ -34,7 +34,15 @@ import { IPOForm } from "@/components/ipo-form"
 import { IPOData } from "@/app/dashboard/mainboard/columns"
 import moment from "moment";
 import { toast } from "sonner"
-import { useGetMainboardsQuery, useCreateMainboardMutation, useUpdateMainboardMutation, useDeleteMainboardMutation, useDeleteMainboardBulkMutation } from "@/lib/features/api/mainboardApi"
+import {
+    useGetMainboardsQuery,
+    useCreateMainboardMutation,
+    useUpdateMainboardMutation,
+    useDeleteMainboardMutation,
+    useDeleteMainboardBulkMutation,
+    useManualUpdateMainboardMutation,
+    useLazyGetMainboardForEditQuery
+} from "@/lib/features/api/mainboardApi"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -43,12 +51,16 @@ export function MainboardClient() {
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
     const { data: mainBoardData, isLoading, isError, refetch, isFetching } = useGetMainboardsQuery(statusFilter ? { status: statusFilter } : undefined)
     const [createMainboard] = useCreateMainboardMutation()
-    const [updateMainboard] = useUpdateMainboardMutation()
+    // const [updateMainboard] = useUpdateMainboardMutation() // Use manual instead
+    const [manualUpdateMainboard] = useManualUpdateMainboardMutation()
+    const [getEditData] = useLazyGetMainboardForEditQuery()
+
     const [deleteMainboard] = useDeleteMainboardMutation()
     const [deleteMainboardBulk, { isLoading: isBulkDeleting }] = useDeleteMainboardBulkMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
+    const [isEditLoading, setIsEditLoading] = useState(false);
 
     // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -67,16 +79,16 @@ export function MainboardClient() {
     }
 
     const handleUpdate = async (values: any) => {
-        console.log("handleUpdate called", { values, editingIPO });
+        console.log("handleUpdate called (Manual)", { values, editingIPO });
         if (!editingIPO) return;
         const idToUpdate = editingIPO._id || editingIPO.id;
         console.log("Updating ID:", idToUpdate);
 
         try {
-            await updateMainboard({ id: idToUpdate!, data: values }).unwrap()
+            await manualUpdateMainboard({ id: idToUpdate!, data: values }).unwrap()
             setIsOpen(false);
             setEditingIPO(null);
-            toast.success("IPO updated successfully")
+            toast.success("IPO updated successfully (Manual)")
         } catch (error) {
             console.error(error);
             toast.error("Error updating IPO")
@@ -104,9 +116,22 @@ export function MainboardClient() {
         }
     }
 
-    const handleEditClick = (ipo: IPOData) => {
-        setEditingIPO(ipo);
-        setIsOpen(true);
+    const handleEditClick = async (ipo: IPOData) => {
+        const id = ipo._id || ipo.id;
+        if (!id) return;
+
+        setIsEditLoading(true);
+        try {
+            // Fetch fresh data for editing
+            const result = await getEditData(id).unwrap();
+            setEditingIPO(result.data);
+            setIsOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch fresh edit data:", error);
+            toast.error("Could not load latest IPO details");
+        } finally {
+            setIsEditLoading(false);
+        }
     }
 
     const handleBulkDelete = async (selectedRows: IPOData[]) => {
@@ -276,6 +301,8 @@ export function MainboardClient() {
             enableHiding: false,
             cell: ({ row }) => {
                 const id = row.original._id;
+                // isEditLoading captured from parent scope
+                const isRowLoading = isEditLoading && editingIPO?._id === id;
 
                 return (
                     <DropdownMenu>
@@ -287,8 +314,9 @@ export function MainboardClient() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditClick(row.original)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            <DropdownMenuItem onClick={() => handleEditClick(row.original)} disabled={isEditLoading}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {isEditLoading && editingIPO?._id === id ? "Loading..." : "Edit"}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onDelete(id || "")} className="text-red-600">
                                 <Trash className="mr-2 h-4 w-4" /> Delete

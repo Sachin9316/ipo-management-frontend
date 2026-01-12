@@ -14,6 +14,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     DropdownMenu,
@@ -31,13 +32,17 @@ import {
     useGetMainboardsQuery,
     useUpdateMainboardMutation,
     useDeleteMainboardMutation,
-    useDeleteMainboardBulkMutation
+    useDeleteMainboardBulkMutation,
+    useManualUpdateMainboardMutation,
+    useLazyGetMainboardForEditQuery
 } from "@/lib/features/api/mainboardApi"
 import {
     useGetSMEIPOsQuery,
     useUpdateSMEIPOMutation,
     useDeleteSMEIPOMutation,
-    useDeleteSMEBulkMutation
+    useDeleteSMEBulkMutation,
+    useManualUpdateSMEMutation,
+    useLazyGetSMEForEditQuery
 } from "@/lib/features/api/smeApi"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AlertModal } from "@/components/ui/alert-modal"
@@ -55,15 +60,25 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
     const { data: rawData, isLoading, isError, isFetching } = query;
 
     // Mutations
+    // Mutations
     const [updateMainboard] = useUpdateMainboardMutation()
+    const [manualUpdateMainboard] = useManualUpdateMainboardMutation()
+    const [getMainboardEditData] = useLazyGetMainboardForEditQuery()
+
     const [deleteMainboard] = useDeleteMainboardMutation()
+
+    // SME Hooks
     const [updateSME] = useUpdateSMEIPOMutation()
+    const [manualUpdateSME] = useManualUpdateSMEMutation() // Manual
+    const [getSMEEditData] = useLazyGetSMEForEditQuery()
+
     const [deleteSME] = useDeleteSMEIPOMutation()
     const [deleteMainboardBulk, { isLoading: isMainboardBulkDeleting }] = useDeleteMainboardBulkMutation()
     const [deleteSMEBulk, { isLoading: isSMEBulkDeleting }] = useDeleteSMEBulkMutation()
 
     const [isOpen, setIsOpen] = useState(false)
     const [editingIPO, setEditingIPO] = useState<IPOData | null>(null)
+    const [isEditLoading, setIsEditLoading] = useState(false)
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
     const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -80,7 +95,7 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
 
         let targetStatus = status.toUpperCase();
         if (targetStatus === 'CLOSED-LISTED') {
-            targetStatus = 'CLOSED,LISTED';
+            targetStatus = 'CLOSED,LISTED,CANCELLED';
         }
 
         if (targetStatus.includes(',')) {
@@ -96,13 +111,16 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
         const idToUpdate = editingIPO._id || editingIPO.id;
         try {
             if (isSME) {
-                await updateSME({ id: idToUpdate!, data: values }).unwrap()
+                // Use Manual Update for SME
+                await manualUpdateSME({ id: idToUpdate!, data: values }).unwrap()
+                toast.success(`SME IPO updated successfully (Manual)`)
             } else {
-                await updateMainboard({ id: idToUpdate!, data: values }).unwrap()
+                // Use Manual Update for Mainboard
+                await manualUpdateMainboard({ id: idToUpdate!, data: values }).unwrap()
+                toast.success(`Mainboard IPO updated successfully (Manual)`)
             }
             setIsOpen(false);
             setEditingIPO(null);
-            toast.success(`${ipoType} IPO updated successfully`)
         } catch (error) {
             console.error(error);
             toast.error("Error updating IPO")
@@ -134,9 +152,26 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
         }
     }
 
-    const handleEditClick = (ipo: IPOData) => {
-        setEditingIPO(ipo);
-        setIsOpen(true);
+    const handleEditClick = async (ipo: IPOData) => {
+        const id = ipo._id || ipo.id;
+        if (!id) return;
+
+        setIsEditLoading(true);
+        try {
+            let result;
+            if (isSME) {
+                result = await getSMEEditData(id).unwrap();
+            } else {
+                result = await getMainboardEditData(id).unwrap();
+            }
+            setEditingIPO(result.data);
+            setIsOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch fresh edit data:", error);
+            toast.error("Could not load latest IPO details");
+        } finally {
+            setIsEditLoading(false);
+        }
     }
 
     const onImageClick = (url: string) => {
@@ -280,9 +315,13 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
         {
             accessorKey: "status",
             header: "Status",
-            cell: ({ row }) => (
-                <div className="capitalize">{row.getValue("status")}</div>
-            )
+            cell: ({ row }) => {
+                const status = row.getValue("status") as string;
+                if (status === 'CANCELLED') {
+                    return <Badge variant="destructive">Cancelled</Badge>
+                }
+                return <div className="capitalize">{status}</div>
+            }
         },
         {
             accessorKey: "gmp",
@@ -312,8 +351,8 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
 
                 return (
                     <div className="flex flex-col">
-                        <span className="font-medium text-green-600">{formatted}</span>
-                        {percentage > 0 && (
+                        <span className={`font-medium ${amount >= 0 ? "text-green-600" : "text-red-600"}`}>{formatted}</span>
+                        {percentage !== 0 && (
                             <span className="text-xs text-muted-foreground">({percentage.toFixed(2)}%)</span>
                         )}
                     </div>
@@ -368,6 +407,7 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
             enableHiding: false,
             cell: ({ row }) => {
                 const id = row.original._id || row.original.id; // Corrected to use fallback
+                const isRowLoading = isEditLoading && editingIPO?._id === id;
 
                 return (
                     <DropdownMenu>
@@ -379,8 +419,9 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditClick(row.original)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            <DropdownMenuItem onClick={() => handleEditClick(row.original)} disabled={isEditLoading}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {isEditLoading && editingIPO?._id === id ? "Loading..." : "Edit"}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onDelete(id || "")} className="text-red-600">
                                 <Trash className="mr-2 h-4 w-4" /> Delete

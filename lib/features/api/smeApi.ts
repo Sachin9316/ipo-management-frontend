@@ -43,6 +43,18 @@ export const smeApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['SME'],
         }),
+        manualUpdateSME: builder.mutation<void, { id: string; data: any }>({
+            query: ({ id, data }) => ({
+                url: `sme/edit/${id}`,
+                method: 'PATCH',
+                body: data,
+            }),
+            invalidatesTags: ['SME'],
+        }),
+        getSMEForEdit: builder.query<{ success: boolean; data: IPOData }, string>({
+            query: (id) => `sme/edit/${id}`,
+            keepUnusedDataFor: 0,
+        }),
     }),
 })
 
@@ -52,4 +64,7 @@ export const {
     useUpdateSMEIPOMutation,
     useDeleteSMEIPOMutation,
     useDeleteSMEBulkMutation,
+    useManualUpdateSMEMutation,
+    useGetSMEForEditQuery,
+    useLazyGetSMEForEditQuery
 } = smeApi

@@ -21,7 +21,7 @@ export type IPOData = {
     companyName: string
     slug: string
     icon: string
-    status: "UPCOMING" | "OPEN" | "CLOSED" | "LISTED"
+    status: "UPCOMING" | "OPEN" | "CLOSED" | "LISTED" | "CANCELLED"
     // Updated types matching backend
     subscription?: {
         qib: number
@@ -45,7 +45,6 @@ export type IPOData = {
     lot_size: number
     lot_price: number
     isAllotmentOut: boolean
-    issueSize?: string
     issueSize?: string
     min_price?: number
     max_price?: number
@@ -97,7 +96,7 @@ export const columns: ColumnDef<IPOData>[] = [
                 currency: "INR",
             }).format(amount)
 
-            return <div className="font-medium text-green-600">{formatted}</div>
+            return <div className={`font-medium ${amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatted}</div>
         },
     },
     {
