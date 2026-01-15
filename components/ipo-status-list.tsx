@@ -364,13 +364,25 @@ export function IPOStatusList({ status, ipoType = "MAINBOARD" }: { status?: stri
             header: "Allotment",
             cell: ({ row }) => {
                 const isOut = row.getValue("isAllotmentOut");
-                return isOut ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                        Released
-                    </span>
-                ) : (
-                    <span className="text-muted-foreground text-xs">-</span>
-                )
+                const status = (row.getValue("status") as string)?.toUpperCase();
+
+                if (isOut) {
+                    return (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                            Released
+                        </span>
+                    );
+                }
+
+                if (status === 'CLOSED') {
+                    return (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Allotment Awaited
+                        </span>
+                    );
+                }
+
+                return <span className="text-muted-foreground text-xs">-</span>;
             }
         },
         {
