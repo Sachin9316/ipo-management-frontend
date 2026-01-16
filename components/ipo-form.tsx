@@ -76,7 +76,6 @@ const formSchema = z.object({
     listing_day_high: z.coerce.number().optional().default(0),
     listing_day_low: z.coerce.number().optional().default(0),
     kfintech_client_id: z.string().optional(),
-    bse_code_nse_code: z.string().min(1, "BSE/NSE Code is required"),
 }).superRefine((data, ctx) => {
     if (data.status === "CLOSED" || data.status === "LISTED") {
         if (!data.registrarName?.trim()) {
@@ -128,7 +127,6 @@ const transformInitialValues = (values: any) => {
         registrarName: values.registrarName || "",
         registrarLink: values.registrarLink || "",
         kfintech_client_id: values.kfintech_client_id || "",
-        bse_code_nse_code: values.bse_code_nse_code || "",
     };
 
     // Transform dates
@@ -271,7 +269,6 @@ export function IPOForm({
             listing_day_high: initialValues?.listing_day_high || 0,
             listing_day_low: initialValues?.listing_day_low || 0,
             kfintech_client_id: initialValues?.kfintech_client_id || "",
-            bse_code_nse_code: initialValues?.bse_code_nse_code || "",
         },
     })
 
@@ -601,19 +598,7 @@ export function IPOForm({
                                 </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="bse_code_nse_code"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>BSE/NSE Code</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="TECHCORP" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+
                         <FormField
                             control={form.control}
                             name="slug"
